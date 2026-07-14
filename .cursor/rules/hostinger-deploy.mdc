@@ -1,0 +1,33 @@
+---
+description: Hostinger SSH deploy workflow for zalora.sbs (no secrets in repo)
+alwaysApply: true
+---
+
+# Zalora — Hostinger live deploy
+
+## SSH (code deploy)
+
+- **Host:** `88.223.85.38` **Port:** `65002` **User:** `u611506725`
+- **Remote source path:** `~/domains/zalora.sbs/public_html/.builds/last-source`
+- **Live app (built output):** `~/domains/zalora.sbs/nodejs/`
+- Auth uses **SSH keys** (`ssh -p 65002 u611506725@88.223.85.38`). Never commit or store SSH passwords.
+
+When the user asks to deploy or push live:
+
+1. Run `npm run build` locally and fix errors first.
+2. Run `./scripts/deploy-hostinger.sh` (or rsync with same excludes).
+3. Tell the user to click **Redeploy** in Hostinger hPanel → zalora.sbs → **Deployments** (build runs on Hostinger, not in SSH shell).
+4. Verify `https://zalora.sbs/api/health` if possible.
+
+Never upload: `.env*`, `backupenv/`, `node_modules/`, `.next/`, passwords.
+
+## Database (Supabase)
+
+- Production DB is **Supabase** (not on Hostinger SSH). Agent cannot run SQL on live DB unless user runs migrations in Supabase SQL Editor.
+- After schema changes, list which `supabase-*.sql` files the user must run.
+- Required column if missing: `users.preferences` (`supabase-preferences-migration.sql`).
+- Recommended: `supabase-stock-function.sql` for atomic stock.
+
+## Env vars
+
+Set only in Hostinger hPanel → Node.js → **Environment variables** and Supabase dashboard — never in git.

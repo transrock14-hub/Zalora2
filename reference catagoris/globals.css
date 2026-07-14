@@ -1,0 +1,69 @@
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --font-font-sans: var(--font-sans);
+  --font-font-heading: var(--font-heading);
+  --font-font-serif: var(--font-serif);
+  --font-font-mono: var(--font-mono);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+  
+:root {
+    --background: #F5F5FA;
+  --foreground: #27272A;
+  --primary: #1A73E8;
+  --primary-foreground: #FFFFFF;
+  --secondary: #FFFFFF;
+  --secondary-foreground: #1A73E8;
+  --muted: #F3F4F6;
+  --muted-foreground: #808089;
+  --accent: #FDD835;
+  --accent-foreground: #000000;
+  --destructive: #FF424F;
+  --card: #FFFFFF;
+  --card-foreground: #27272A;
+  --popover: #FFFFFF;
+  --popover-foreground: #27272A;
+  --border: #E5E7EB;
+  --input: #F8F8F8;
+  --ring: #1A73E8;
+  --chart-1: #1A73E8;
+  --chart-2: #FDD835;
+  --chart-3: #00AB56;
+  --chart-4: #FF424F;
+  --chart-5: #808089;
+
+  --font-sans: "Inter";
+  --font-heading: "Inter";
+  --font-serif: "Playfair Display";
+  --font-mono: "JetBrains Mono";
+
+  --radius: 0.5rem;
+}
