@@ -33,14 +33,21 @@ export function AdminHeader({ user }: { user: User }) {
     try {
       const res = await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
       const data = await res.json()
-      
+
       if (data.returnedToAdmin) {
         toast.success('Returned to admin account')
-        router.push('/admin')
-      } else {
-        router.push('/')
+        window.location.href = '/admin'
+        return
       }
-      router.refresh()
+
+      try {
+        const { createSupabaseBrowserClient } = await import('@/lib/supabase-client')
+        await createSupabaseBrowserClient().auth.signOut({ scope: 'global' })
+      } catch {
+        // ignore
+      }
+
+      window.location.href = '/auth/login'
     } catch {
       toast.error('Logout failed')
     }

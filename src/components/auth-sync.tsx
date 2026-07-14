@@ -9,22 +9,15 @@ export function AuthSync() {
   const setUser = useUserStore((state) => state.setUser)
   const clearUser = useUserStore((state) => state.clearUser)
 
-  // Clear client user only on login/logout pages so after logout we don't show stale user.
-  // Do NOT clear user when /api/auth/me returns 401 or null — on Netlify/serverless the server
-  // can fail to read the cookie (cold start, etc.) and we must not wipe the client state or
-  // the UI will show "Log in" and clicking Account/Orders will redirect to login.
+  // Clear client user on login/logout so we never show a stale session.
+  // Do NOT clear user when /api/auth/me returns 401 or null on normal pages —
+  // on serverless the cookie can fail to read briefly (cold start).
   useEffect(() => {
-    // Clear user only on logout page
-    if (pathname === '/auth/logout') {
-      clearUser()
+    if (pathname === '/auth/logout' || pathname === '/auth/login' || pathname === '/admin/login') {
+      if (pathname === '/auth/logout') clearUser()
       return
     }
-    
-    // Don't sync on login pages (they handle their own auth)
-    if (pathname === '/auth/login' || pathname === '/admin/login') {
-      return
-    }
-    
+
     // Skip sync on public pages that don't need auth
     if (
       pathname?.startsWith('/auth/') ||
