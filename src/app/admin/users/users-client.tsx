@@ -7,7 +7,7 @@ import { Icon } from '@iconify/react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { getStatusColor, formatDateTime } from '@/lib/utils'
+import { getStatusColor, formatDateTime, formatDisplayUserId } from '@/lib/utils'
 import { UserActions } from './user-actions'
 
 interface User {
@@ -186,7 +186,7 @@ export function UsersClient({
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground">{user.email}</p>
-                    <p className="text-xs text-muted-foreground">ID: {user.id.slice(-8)}</p>
+                    <p className="text-xs text-muted-foreground">ID: {formatDisplayUserId(user.id)}</p>
                   </div>
                 </div>
 

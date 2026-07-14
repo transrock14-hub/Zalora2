@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { Icon } from '@iconify/react'
-import { formatPrice } from '@/lib/utils'
+import { formatPrice, formatDisplayUserId } from '@/lib/utils'
 import { useLanguage } from '@/contexts/language-context'
 import type { TranslationKey } from '@/lib/translations'
 
@@ -96,7 +96,7 @@ export function AccountClient({ user, stats }: AccountClientProps) {
               <div className="text-xs text-muted-foreground mt-0.5">
                 {user.email.replace(/(.{4}).*(@.*)/, '$1****$2')}
               </div>
-              <div className="text-xs text-muted-foreground mt-0.5">ID: {user.id.slice(-8)}</div>
+              <div className="text-xs text-muted-foreground mt-0.5">ID: {formatDisplayUserId(user.id)}</div>
             </div>
           </div>
           <Link href="/account/profile">
