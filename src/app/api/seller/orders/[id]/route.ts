@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { createNotification } from '@/lib/notifications'
-import { chargeWholesaleForOrder } from '@/lib/wholesale-settlement'
+import {
+  chargeWholesaleForOrder,
+  WholesaleSettlementError,
+} from '@/lib/wholesale-settlement'
 
 /**
  * PATCH: Seller updates order status (e.g. mark shipped, completed). Only for orders with items from seller's shop.
@@ -72,10 +75,20 @@ export async function PATCH(
       )
     }
 
-    // When seller processes/ships the order, deduct wholesale from their balance
-    // (same charge as PAID — idempotent, will not double-deduct).
+    // Ship only after wholesale can be paid from the seller's store/account balance.
+    // Never mark SHIPPED if balance is insufficient or cost price is missing.
     if (status === 'SHIPPED') {
-      await chargeWholesaleForOrder(orderId)
+      try {
+        await chargeWholesaleForOrder(orderId, {
+          ownerId: session.userId,
+          strict: true,
+        })
+      } catch (e) {
+        if (e instanceof WholesaleSettlementError) {
+          return NextResponse.json({ error: e.message, code: e.code }, { status: 400 })
+        }
+        throw e
+      }
     }
 
     const updateData: Record<string, unknown> = {}

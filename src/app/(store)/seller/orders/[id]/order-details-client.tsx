@@ -263,7 +263,7 @@ export function SellerOrderDetailsClient({ order: initialOrder }: SellerOrderDet
                         {updating ? 'Updating...' : 'Mark as Shipped'}
                       </Button>
                       <p className="text-xs text-muted-foreground mt-2">
-                        Note: Only admins can mark orders as Delivered or Completed. You will be notified when the order status changes.
+                        Shipping deducts the wholesale cost from your store balance. You need enough balance to ship. Only admins can mark orders as Delivered or Completed.
                       </p>
                     </>
                   )}

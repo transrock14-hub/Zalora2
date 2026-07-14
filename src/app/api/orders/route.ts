@@ -352,7 +352,8 @@ export async function POST(request: NextRequest) {
     // If the order is created already paid (balance payment), the reseller pays
     // the wholesale price now. Other methods charge when payment is approved.
     if (orderStatus === 'PAID') {
-      await chargeWholesaleForOrder(order.id)
+      // Prefer charging at payment; if seller lacks funds, defer until ship (strict block).
+      await chargeWholesaleForOrder(order.id, { strict: false })
     }
 
     // Fetch complete order with items

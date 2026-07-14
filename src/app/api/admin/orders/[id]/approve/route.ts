@@ -43,7 +43,7 @@ export async function POST(
 
     // Reseller pays the wholesale price when the order becomes paid.
     if (!wasPaid) {
-      await chargeWholesaleForOrder(params.id)
+      await chargeWholesaleForOrder(params.id, { strict: false })
     }
 
     return NextResponse.json({

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { createNotification } from '@/lib/notifications'
-import { chargeWholesaleForOrder, payoutSalesForOrder, refundSettlementForOrder } from '@/lib/wholesale-settlement'
+import { chargeWholesaleForOrder, payoutSalesForOrder, refundSettlementForOrder, WholesaleSettlementError } from '@/lib/wholesale-settlement'
 
 export async function GET(
   request: NextRequest,
@@ -159,6 +159,21 @@ export async function PATCH(
     const wasRefunded = oldOrder.status === 'REFUNDED' || oldOrder.status === 'CANCELLED'
     const nowRefunded = !!status && (status === 'REFUNDED' || status === 'CANCELLED')
 
+    // Block SHIPPED if seller cannot cover wholesale (same rule as seller ship).
+    if (
+      status === 'SHIPPED' &&
+      !['SHIPPED', 'DELIVERED', 'COMPLETED', 'CANCELLED', 'REFUNDED'].includes(oldOrder.status ?? '')
+    ) {
+      try {
+        await chargeWholesaleForOrder(params.id, { strict: true })
+      } catch (e) {
+        if (e instanceof WholesaleSettlementError) {
+          return NextResponse.json({ error: e.message, code: e.code }, { status: 400 })
+        }
+        throw e
+      }
+    }
+
     // Update order
     const { data: order, error: updateError } = await supabaseAdmin
       .from('orders')
@@ -188,7 +203,7 @@ export async function PATCH(
     // Reseller money flow: pay wholesale when the order becomes paid, and
     // receive the sales price once it is delivered/completed.
     if (nowPaid && !wasPaid) {
-      await chargeWholesaleForOrder(params.id)
+      await chargeWholesaleForOrder(params.id, { strict: false })
     }
     if (nowDelivered && !wasDelivered) {
       await payoutSalesForOrder(params.id)
