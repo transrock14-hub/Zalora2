@@ -47,16 +47,18 @@ export function truncate(text: string, length: number): string {
 }
 
 /**
- * Public-facing user ID made of digits only (stable for a given UUID).
+ * Public-facing user ID: 6 digits only (stable for a given UUID).
  * Does not change the real database id — display only.
  */
 export function formatDisplayUserId(id: string): string {
-  const hex = id.replace(/[^0-9a-f]/gi, '').slice(-10)
-  if (!hex) return '0'
+  const hex = id.replace(/[^0-9a-f]/gi, '')
+  if (!hex) return '000000'
   try {
-    return BigInt(`0x${hex}`).toString(10)
+    const n = Number(BigInt(`0x${hex.slice(-12)}`) % 1000000n)
+    return String(n).padStart(6, '0')
   } catch {
-    return hex.replace(/\D/g, '') || '0'
+    const digits = hex.replace(/\D/g, '').slice(-6)
+    return digits.padStart(6, '0')
   }
 }
 
