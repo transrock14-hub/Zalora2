@@ -51,15 +51,12 @@ export function truncate(text: string, length: number): string {
  * Does not change the real database id — display only.
  */
 export function formatDisplayUserId(id: string): string {
-  const hex = id.replace(/[^0-9a-f]/gi, '')
+  const hex = id.replace(/[^0-9a-f]/gi, '').slice(-8)
   if (!hex) return '000000'
-  try {
-    const n = Number(BigInt(`0x${hex.slice(-12)}`) % 1000000n)
-    return String(n).padStart(6, '0')
-  } catch {
-    const digits = hex.replace(/\D/g, '').slice(-6)
-    return digits.padStart(6, '0')
-  }
+  // Avoid BigInt literals (Hostinger/TS target may be < ES2020)
+  const n = parseInt(hex, 16)
+  if (!Number.isFinite(n)) return '000000'
+  return String(n % 1000000).padStart(6, '0')
 }
 
 export function getInitials(name: string): string {
