@@ -41,12 +41,12 @@ export function AccountClient({ user, stats }: AccountClientProps) {
   // When shop pending: Verification Status active; others inactive.
   const menuItems: Array<{ icon: string; labelKey: TranslationKey; href: string; color: string; show: boolean; badge?: number; requiresShop?: boolean }> = [
     { icon: 'solar:cart-large-2-bold', labelKey: 'wholesaleManagement', href: '/account/wholesale', color: 'text-chart-1', show: user.canSell, requiresShop: true },
-    { icon: 'solar:shop-bold', labelKey: 'applyForShop', href: '/seller/create-shop', color: 'text-chart-2', show: user.canSell && !hasApprovedShop, requiresShop: false },
+    { icon: 'solar:shop-bold', labelKey: 'applyForShop', href: '/seller/create-shop', color: 'text-chart-2', show: !user.shop, requiresShop: false },
     { icon: 'solar:chart-2-bold', labelKey: 'sellerDashboard', href: '/seller/dashboard', color: 'text-chart-2', show: user.canSell, requiresShop: true },
     { icon: 'solar:shop-bold', labelKey: 'shopDetails', href: '/seller/shop', color: 'text-chart-2', show: user.canSell && !!user.shop, requiresShop: true },
     { icon: 'solar:box-bold', labelKey: 'productManagement', href: '/seller/products', color: 'text-chart-2', show: user.canSell && !!user.shop, requiresShop: true },
     { icon: 'solar:bill-list-bold', labelKey: 'storeOrders', href: '/seller/orders', color: 'text-cyan-500', show: user.canSell && !!user.shop, badge: (stats.sellerOrdersCount ?? 0) || undefined, requiresShop: true },
-    { icon: 'solar:verified-check-bold', labelKey: 'verificationStatusCaption', href: '/seller/verification-status', color: 'text-cyan-500', show: user.canSell, requiresShop: false },
+    { icon: 'solar:verified-check-bold', labelKey: 'verificationStatusCaption', href: '/seller/verification-status', color: 'text-cyan-500', show: !!user.shop || user.canSell, requiresShop: false },
     { icon: 'solar:document-text-bold', labelKey: 'billingRecords', href: '/account/billing', color: 'text-chart-3', show: true, requiresShop: false },
     { icon: 'solar:map-point-bold', labelKey: 'deliveryAddress', href: '/account/addresses', color: 'text-destructive', show: true, requiresShop: true },
     { icon: 'solar:heart-bold', labelKey: 'shopCollection', href: '/account/favorites', color: 'text-chart-2', show: true, requiresShop: true },

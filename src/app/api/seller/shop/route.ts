@@ -14,12 +14,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    if (!currentUser.canSell) {
-      return NextResponse.json(
-        { error: 'You are not approved to sell. Please contact support.' },
-        { status: 403 }
-      )
-    }
+    // Anyone signed-in may apply. Admin KYC/shop approval grants canSell afterward.
 
     // Check they don't already have a shop
     const { data: existingShop } = await supabaseAdmin
