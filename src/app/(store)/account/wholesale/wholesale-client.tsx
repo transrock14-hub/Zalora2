@@ -6,6 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Icon } from '@iconify/react'
 import { formatPrice } from '@/lib/utils'
+import { salesPriceFromWholesale } from '@/lib/wholesale-pricing'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import toast from 'react-hot-toast'
@@ -465,12 +466,23 @@ export function WholesaleClient({
                     </div>
                     <div className="p-4 space-y-2">
                       <p className="flex justify-between text-sm">
-                        <span className="text-gray-600">Sales Price:</span>
-                        <span className="font-bold text-red-600">{formatPrice(modalProduct.salePrice)}</span>
+                        <span className="text-gray-600">Wholesale Price:</span>
+                        <span className="font-bold text-red-600">
+                          {formatPrice(modalProduct.wholesalePrice ?? modalProduct.price)}
+                        </span>
                       </p>
                       <p className="flex justify-between text-sm">
-                        <span className="text-gray-600">Wholesale Price:</span>
-                        <span className="font-bold text-red-600">{formatPrice(modalProduct.wholesalePrice ?? modalProduct.price)}</span>
+                        <span className="text-gray-600">Sales Price (+20%):</span>
+                        <span className="font-bold text-red-600">
+                          {formatPrice(
+                            modalProduct.wholesalePrice != null && modalProduct.wholesalePrice > 0
+                              ? salesPriceFromWholesale(modalProduct.wholesalePrice)
+                              : modalProduct.salePrice
+                          )}
+                        </span>
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        You pay wholesale when shipping; you receive the sales price when delivered. Profit is 20%.
                       </p>
                     </div>
                     <div className="flex gap-2 p-4 border-t border-gray-200">

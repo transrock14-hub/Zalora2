@@ -323,20 +323,11 @@ export function ProductFormClient({ product, categories, shops }: ProductFormCli
             </div>
             {!formData.shopId && (
               <>
-                <p className="text-xs text-muted-foreground">For catalog products (No Shop), set these to show in Wholesale Management. Sellers pay Wholesale Price when listing; Sale Price is shown to buyers.</p>
+                <p className="text-xs text-muted-foreground">
+                  For catalog products (No Shop), set Wholesale Price. Sale Price is fixed at wholesale + 20%
+                  (what buyers pay / what sellers receive on delivery). Sellers pay wholesale when shipping.
+                </p>
                 <div className="grid grid-cols-2 gap-4 pt-2">
-                  <div>
-                    <Label htmlFor="salePrice">Sale Price (USD)</Label>
-                    <Input
-                      id="salePrice"
-                      type="number"
-                      step="0.01"
-                      value={formData.salePrice}
-                      onChange={(e) => setFormData({ ...formData, salePrice: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })}
-                      placeholder="Retail price shown to buyers"
-                      min="0"
-                    />
-                  </div>
                   <div>
                     <Label htmlFor="wholesalePrice">Wholesale Price (USD)</Label>
                     <Input
@@ -344,11 +335,42 @@ export function ProductFormClient({ product, categories, shops }: ProductFormCli
                       type="number"
                       step="0.01"
                       value={formData.wholesalePrice}
-                      onChange={(e) => setFormData({ ...formData, wholesalePrice: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })}
-                      placeholder="Price deducted from seller when listing"
+                      onChange={(e) => {
+                        const wholesale =
+                          e.target.value === '' ? '' : parseFloat(e.target.value) || 0
+                        const sale =
+                          wholesale === '' || !(Number(wholesale) > 0)
+                            ? ''
+                            : Math.round(Number(wholesale) * 1.2 * 100) / 100
+                        setFormData({
+                          ...formData,
+                          wholesalePrice: wholesale,
+                          salePrice: sale,
+                          price: sale === '' ? formData.price : sale,
+                        })
+                      }}
+                      placeholder="Seller cost to process/ship"
                       min="0"
                     />
-                    <p className="text-xs text-muted-foreground mt-1">If set, product appears in Wholesale Management.</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      If set, product appears in Wholesale Management.
+                    </p>
+                  </div>
+                  <div>
+                    <Label htmlFor="salePrice">Sale Price (USD, +20%)</Label>
+                    <Input
+                      id="salePrice"
+                      type="number"
+                      step="0.01"
+                      value={formData.salePrice}
+                      readOnly
+                      className="bg-muted"
+                      placeholder="Auto: wholesale × 1.20"
+                      min="0"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Locked at wholesale + 20%.
+                    </p>
                   </div>
                 </div>
               </>

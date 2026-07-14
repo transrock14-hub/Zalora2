@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { getSession } from '@/lib/auth'
+import { salesPriceFromWholesale } from '@/lib/wholesale-pricing'
 
 export async function POST(req: NextRequest) {
   try {
@@ -39,6 +40,9 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Sales is always 20% above wholesale (ignore mismatched catalog salePrice)
+    const salePrice = salesPriceFromWholesale(wholesalePrice)
+
     // 2) Get user's approved shop
     const { data: shop, error: shopError } = await supabaseAdmin
       .from('shops')
@@ -54,7 +58,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // 2b) Already listed? (seller has a product with this catalog as source and not yet sold/deleted)
+    // 2b) Already listed?
     const { data: existingListing } = await supabaseAdmin
       .from('products')
       .select('id')
@@ -70,13 +74,11 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // 3) Unique slug for seller's copy (slug is unique globally)
+    // 3) Unique slug for seller's copy
     const baseSlug = (catalogProduct as any).slug
     const uniqueSlug = `${baseSlug}-${shop.id.slice(0, 8)}-${Date.now().toString(36)}`
 
-    const salePrice = Number((catalogProduct as any).salePrice) || Number((catalogProduct as any).price)
-
-    // 4) Insert new product for seller's shop (price = sale price; costPrice = wholesale/bought price)
+    // 4) Insert seller product: price = sales (+20%), costPrice = wholesale
     const { data: newProduct, error: insertError } = await supabaseAdmin
       .from('products')
       .insert({
@@ -107,7 +109,12 @@ export async function POST(req: NextRequest) {
     }
 
     // 5) Copy product images
-    const images = (catalogProduct as any).images as Array<{ url: string; alt: string | null; sortOrder: number; isPrimary: boolean }> | undefined
+    const images = (catalogProduct as any).images as Array<{
+      url: string
+      alt: string | null
+      sortOrder: number
+      isPrimary: boolean
+    }> | undefined
     if (images && images.length > 0) {
       const imageRows = images.map((img, idx) => ({
         productId: (newProduct as any).id,
@@ -119,17 +126,15 @@ export async function POST(req: NextRequest) {
       await supabaseAdmin.from('product_images').insert(imageRows)
     }
 
-    // Note: Balance will be deducted when seller ships the product (marks order as SHIPPED)
     return NextResponse.json({
       success: true,
       message: 'Product added to products',
       productId: (newProduct as any).id,
+      wholesalePrice,
+      salePrice,
     })
   } catch (e) {
     console.error('Wholesale list error:', e)
-    return NextResponse.json(
-      { error: 'Something went wrong' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Something went wrong' }, { status: 500 })
   }
 }

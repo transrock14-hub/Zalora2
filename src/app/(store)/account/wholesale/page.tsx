@@ -1,6 +1,7 @@
 import { getCurrentUser } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { WholesaleClient } from './wholesale-client'
+import { salesPriceFromWholesale } from '@/lib/wholesale-pricing'
 
 export const dynamic = 'force-dynamic'
 
@@ -93,21 +94,30 @@ async function getWholesaleData(userId: string, searchParams: SearchParams) {
 
   return {
     listedCatalogIds,
-    products: catalogProducts.map((p: any) => ({
-      id: p.id,
-      name: p.name,
-      slug: p.slug,
-      price: Number(p.price),
-      comparePrice: p.comparePrice ? Number(p.comparePrice) : null,
-      wholesalePrice: p.wholesalePrice != null ? Number(p.wholesalePrice) : null,
-      salePrice: p.salePrice != null ? Number(p.salePrice) : Number(p.price),
-      rating: Number(p.rating || 0),
-      reviews: p.totalReviews || 0,
-      image: p.images && p.images.length > 0 ? p.images[0].url : '/placeholder-product.jpg',
-      categoryId: p.categoryId,
-      categoryName: p.category?.name || 'Uncategorized',
-      isFeatured: p.isFeatured,
-    })),
+    products: catalogProducts.map((p: any) => {
+      const wholesalePrice = p.wholesalePrice != null ? Number(p.wholesalePrice) : null
+      const salePrice =
+        wholesalePrice != null && wholesalePrice > 0
+          ? salesPriceFromWholesale(wholesalePrice)
+          : p.salePrice != null
+            ? Number(p.salePrice)
+            : Number(p.price)
+      return {
+        id: p.id,
+        name: p.name,
+        slug: p.slug,
+        price: Number(p.price),
+        comparePrice: p.comparePrice ? Number(p.comparePrice) : null,
+        wholesalePrice,
+        salePrice,
+        rating: Number(p.rating || 0),
+        reviews: p.totalReviews || 0,
+        image: p.images && p.images.length > 0 ? p.images[0].url : '/placeholder-product.jpg',
+        categoryId: p.categoryId,
+        categoryName: p.category?.name || 'Uncategorized',
+        isFeatured: p.isFeatured,
+      }
+    }),
     total,
     pages: Math.ceil(total / limit),
     page,

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { getSession } from '@/lib/auth'
 import { revalidateStorefront } from '@/lib/revalidate'
+import { normalizeWholesalePair } from '@/lib/wholesale-pricing'
 
 export async function POST(req: NextRequest) {
   try {
@@ -54,6 +55,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Slug already exists' }, { status: 400 })
     }
 
+    // Catalog (no shop): sales price is always wholesale + 20%
+    let resolvedWholesale =
+      wholesalePrice != null && wholesalePrice !== '' ? Number(wholesalePrice) : null
+    let resolvedSale = salePrice != null && salePrice !== '' ? Number(salePrice) : null
+    let resolvedPrice = Number(price)
+    if (!shopId) {
+      const pair = normalizeWholesalePair({
+        wholesalePrice: resolvedWholesale,
+        salePrice: resolvedSale,
+        price: resolvedPrice,
+      })
+      if (pair) {
+        resolvedWholesale = pair.wholesalePrice
+        resolvedSale = pair.salePrice
+        resolvedPrice = pair.salePrice
+      }
+    }
+
     // Create product
     const { data: product, error: productError } = await supabaseAdmin
       .from('products')
@@ -61,10 +80,10 @@ export async function POST(req: NextRequest) {
         name,
         slug,
         description: description || null,
-        price,
+        price: resolvedPrice,
         comparePrice: comparePrice || null,
-        wholesalePrice: wholesalePrice != null && wholesalePrice !== '' ? wholesalePrice : null,
-        salePrice: salePrice != null && salePrice !== '' ? salePrice : null,
+        wholesalePrice: resolvedWholesale,
+        salePrice: resolvedSale,
         stock: stock || 0,
         sku: sku || null,
         categoryId: categoryId.trim(),
