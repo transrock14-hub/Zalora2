@@ -21,7 +21,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
 import {
   Select,
   SelectContent,
@@ -37,7 +36,7 @@ interface User {
   name: string
   role: string
   status: string
-  canSell: boolean
+  canSell?: boolean
   shop?: {
     id: string
     name: string
@@ -52,7 +51,6 @@ export function UserActions({ user }: { user: User }) {
   const [editData, setEditData] = useState({
     role: user.role,
     status: user.status,
-    canSell: user.canSell,
   })
 
   const handleLoginAsUser = async () => {
@@ -221,18 +219,9 @@ export function UserActions({ user }: { user: User }) {
               </Select>
             </div>
 
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Can Sell</Label>
-                <p className="text-xs text-muted-foreground">
-                  Allow user to create and manage a shop
-                </p>
-              </div>
-              <Switch
-                checked={editData.canSell}
-                onCheckedChange={(checked) => setEditData({ ...editData, canSell: checked })}
-              />
-            </div>
+            <p className="text-xs text-muted-foreground rounded-md border border-border bg-muted/40 px-3 py-2">
+              Shop applications do not need a Can Sell flag. Approve or reject each shop from Admin → Shops / KYC.
+            </p>
           </div>
 
           <DialogFooter>

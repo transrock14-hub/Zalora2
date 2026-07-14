@@ -90,7 +90,6 @@ export function UserDetailsClient({
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
   const [savingControls, setSavingControls] = useState(false)
-  const [canSell, setCanSell] = useState(initialUser.canSell)
   const [prefs, setPrefs] = useState({
     orderUpdates: initialUser.preferences?.orderUpdates !== false,
     promotions: initialUser.preferences?.promotions !== false,
@@ -103,7 +102,6 @@ export function UserDetailsClient({
     role: initialUser.role,
     status: initialUser.status,
     balance: initialUser.balance.toString(),
-    canSell: initialUser.canSell,
   })
 
   const handleSaveControls = async () => {
@@ -114,7 +112,6 @@ export function UserDetailsClient({
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          canSell,
           preferences: {
             orderUpdates: prefs.orderUpdates,
             promotions: prefs.promotions,
@@ -145,7 +142,6 @@ export function UserDetailsClient({
           role: editData.role,
           status: editData.status,
           balance: parseFloat(editData.balance),
-          canSell: editData.canSell,
         }),
         credentials: 'include',
       })
@@ -184,7 +180,6 @@ export function UserDetailsClient({
                 role: initialUser.role,
                 status: initialUser.status,
                 balance: initialUser.balance.toString(),
-                canSell: initialUser.canSell,
               })
               setIsEditDialogOpen(true)
             }}
@@ -387,9 +382,9 @@ export function UserDetailsClient({
                 </Badge>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Can Sell</span>
+                <span className="text-muted-foreground">Seller access</span>
                 <Badge variant={initialUser.canSell ? 'default' : 'secondary'}>
-                  {initialUser.canSell ? 'Yes' : 'No'}
+                  {initialUser.canSell ? 'Granted (shop approved)' : 'Pending shop approval'}
                 </Badge>
               </div>
               <div className="flex justify-between">
@@ -451,13 +446,9 @@ export function UserDetailsClient({
                   onCheckedChange={(c) => setPrefs((p) => ({ ...p, newsletter: c }))}
                 />
               </div>
-              <div className="flex items-center justify-between pt-2 border-t border-border">
-                <div className="space-y-0.5">
-                  <Label>Can sell</Label>
-                  <p className="text-xs text-muted-foreground">Allow creating a shop</p>
-                </div>
-                <Switch checked={canSell} onCheckedChange={setCanSell} />
-              </div>
+              <p className="text-xs text-muted-foreground rounded-md border border-border bg-muted/40 px-3 py-2">
+                Seller access is granted when you approve the shop/KYC application — not via a Can Sell toggle.
+              </p>
               <Button
                 className="w-full"
                 onClick={handleSaveControls}
@@ -560,16 +551,9 @@ export function UserDetailsClient({
               />
             </div>
 
-            <div className="flex items-center justify-between">
-              <Label htmlFor="canSell">Can Sell</Label>
-              <input
-                id="canSell"
-                type="checkbox"
-                checked={editData.canSell}
-                onChange={(e) => setEditData({ ...editData, canSell: e.target.checked })}
-                className="size-4"
-              />
-            </div>
+            <p className="text-xs text-muted-foreground rounded-md border border-border bg-muted/40 px-3 py-2">
+              New users can apply for a shop anytime. Approve or reject that application from Admin → Shops.
+            </p>
 
             <div className="flex gap-2 justify-end pt-4">
               <Button
