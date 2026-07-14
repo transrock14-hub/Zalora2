@@ -22,17 +22,14 @@ async function getCategoryData(slug: string, searchParams: SearchParams) {
   const slugDecoded = decodeURIComponent(slug || '').trim()
   if (!slugDecoded) return null
 
-  const select = `
-    *,
-    children:categories!categories_parentId_fkey (
-      *
-    )
-  `
+  // Do NOT embed children via PostgREST self-FK hint — live DB has parentId
+  // column but no `categories_parentId_fkey` in the schema cache, which made
+  // /categories/[slug] return 404 (blank page). Fetch children separately.
 
   // Try exact match first
   let result = await supabaseAdmin
     .from('categories')
-    .select(select)
+    .select('*')
     .eq('slug', slugDecoded)
     .maybeSingle()
 
@@ -42,7 +39,7 @@ async function getCategoryData(slug: string, searchParams: SearchParams) {
     if (normalized !== slugDecoded) {
       result = await supabaseAdmin
         .from('categories')
-        .select(select)
+        .select('*')
         .eq('slug', normalized)
         .maybeSingle()
     }
@@ -60,7 +57,7 @@ async function getCategoryData(slug: string, searchParams: SearchParams) {
     if (match) {
       const byId = await supabaseAdmin
         .from('categories')
-        .select(select)
+        .select('*')
         .eq('id', match.id)
         .single()
       if (byId.data) result = byId
@@ -72,8 +69,14 @@ async function getCategoryData(slug: string, searchParams: SearchParams) {
     return null
   }
 
-  // Filter active children
-  const activeChildren = (category.children || []).filter((c: any) => c.isActive)
+  const { data: childRows } = await supabaseAdmin
+    .from('categories')
+    .select('id, name, slug, isActive')
+    .eq('parentId', category.id)
+    .eq('isActive', true)
+    .order('sortOrder', { ascending: true })
+
+  const activeChildren = childRows || []
 
   const page = parseInt(searchParams.page || '1')
   const limit = 20
