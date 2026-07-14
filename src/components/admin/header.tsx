@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { Icon } from '@iconify/react'
 import { Button } from '@/components/ui/button'
 import {
@@ -27,8 +26,6 @@ interface User {
 }
 
 export function AdminHeader({ user }: { user: User }) {
-  const router = useRouter()
-
   const handleLogout = async () => {
     try {
       const res = await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
