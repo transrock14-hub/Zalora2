@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { logout } from '@/lib/auth'
+import { logout, setExclusiveSessionCookie } from '@/lib/auth'
 import {
   createSupabaseRouteHandlerClient,
   applyCookiesToResponse,
@@ -15,7 +15,7 @@ const AUTH_COOKIE_OPTIONS = {
 async function buildLogoutResponse(request: NextRequest, redirect?: string) {
   const result = await logout()
 
-  // Returning to admin after impersonation: restore JWT only — keep/switch cookie.
+  // Returning to admin after impersonation: restore JWT + exclusive session
   if (result.returnedToAdmin && result.token) {
     const res = redirect
       ? NextResponse.redirect(new URL(redirect, request.url))
@@ -24,6 +24,7 @@ async function buildLogoutResponse(request: NextRequest, redirect?: string) {
       ...AUTH_COOKIE_OPTIONS,
       maxAge: 60 * 60 * 24 * 7,
     })
+    setExclusiveSessionCookie(res, result.sessionId ?? null)
     return res
   }
 
@@ -36,8 +37,9 @@ async function buildLogoutResponse(request: NextRequest, redirect?: string) {
     ...AUTH_COOKIE_OPTIONS,
     maxAge: 0,
   })
+  setExclusiveSessionCookie(res, null)
 
-  // Clear Supabase Auth session cookies (this is what was causing auto re-login)
+  // Clear Supabase Auth session cookies
   try {
     if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
       const { supabase, cookiesToSet } = await createSupabaseRouteHandlerClient(request)

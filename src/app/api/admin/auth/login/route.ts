@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { login } from '@/lib/auth'
+import { login, createExclusiveSession, setExclusiveSessionCookie, UserRole } from '@/lib/auth'
 import { createSupabaseRouteHandlerClient, applyCookiesToResponse } from '@/lib/supabase-server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { UserRole } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
   try {
@@ -92,6 +91,18 @@ export async function POST(request: NextRequest) {
             )
           }
 
+          // Kick every other browser / device for this admin account
+          try {
+            await supabase.auth.signOut({ scope: 'others' })
+          } catch (e) {
+            console.warn('[ADMIN LOGIN] signOut(others) failed:', e)
+          }
+
+          const sessionId = await createExclusiveSession(appUser.id, {
+            ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null,
+            userAgent: request.headers.get('user-agent'),
+          })
+
           const response = NextResponse.json({
             success: true,
             user: {
@@ -102,6 +113,7 @@ export async function POST(request: NextRequest) {
             },
           })
           applyCookiesToResponse(response, cookiesToSet)
+          setExclusiveSessionCookie(response, sessionId)
           return response
         }
         
@@ -152,11 +164,14 @@ export async function POST(request: NextRequest) {
     if (result.token) {
       res.cookies.set('auth-token', result.token, {
         httpOnly: true,
-        secure: true,
+        secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         path: '/',
         maxAge: 60 * 60 * 24 * 7,
       })
+    }
+    if (result.sessionId) {
+      setExclusiveSessionCookie(res, result.sessionId)
     }
     return res
   } catch (error) {

@@ -35,9 +35,11 @@ export function AuthSync() {
 
         if (res.ok && data.user) {
           setUser(data.user)
+        } else if (res.ok && data.user == null) {
+          // Logged out elsewhere (single-session) or no session
+          clearUser()
         }
-        // Do not clear user on 401 or 200+null: server may have failed to read the cookie.
-        // Protected routes (/account, /seller, /checkout) will redirect server-side if needed.
+        // Do not clear on network/5xx; server will redirect on protected routes if needed.
       } catch {
         // Don't clear user on network error; server will redirect on protected routes if needed
       }

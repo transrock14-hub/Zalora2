@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { login } from '@/lib/auth'
+import {
+  login,
+  createExclusiveSession,
+  setExclusiveSessionCookie,
+} from '@/lib/auth'
 import { createSupabaseRouteHandlerClient, applyCookiesToResponse } from '@/lib/supabase-server'
 import { supabaseAdmin } from '@/lib/supabase'
 
@@ -48,14 +52,43 @@ export async function POST(request: NextRequest) {
             }
           }
 
+          // Kick every other browser / device for this account
+          try {
+            await supabase.auth.signOut({ scope: 'others' })
+          } catch (e) {
+            console.warn('[LOGIN] signOut(others) failed:', e)
+          }
+
+          const sessionId = await createExclusiveSession(data.user.id, {
+            ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null,
+            userAgent: request.headers.get('user-agent'),
+          })
+
+          await supabaseAdmin
+            .from('users')
+            .update({ lastLoginAt: new Date().toISOString() })
+            .eq('id', data.user.id)
+
           const response = NextResponse.json({
             success: true,
-            user: appUser ? { id: appUser.id, email: appUser.email, name: appUser.name, role: appUser.role } : { id: data.user.id, email: data.user.email ?? email, name: data.user.user_metadata?.name ?? '', role: 'USER' },
+            user: appUser
+              ? { id: appUser.id, email: appUser.email, name: appUser.name, role: appUser.role }
+              : {
+                  id: data.user.id,
+                  email: data.user.email ?? email,
+                  name: data.user.user_metadata?.name ?? '',
+                  role: 'USER',
+                },
           })
           applyCookiesToResponse(response, cookiesToSet)
+          setExclusiveSessionCookie(response, sessionId)
           return response
         }
-        if (error?.message && !error.message.toLowerCase().includes('invalid') && !error.message.toLowerCase().includes('credentials')) {
+        if (
+          error?.message &&
+          !error.message.toLowerCase().includes('invalid') &&
+          !error.message.toLowerCase().includes('credentials')
+        ) {
           const res = NextResponse.json({ error: error.message }, { status: 401 })
           applyCookiesToResponse(res, cookiesToSet)
           return res
@@ -69,7 +102,8 @@ export async function POST(request: NextRequest) {
     const result = await login(email, password)
     if (!result.success || !result.user) {
       const errorMessage = result.error || 'Invalid email or password'
-      const statusCode = errorMessage.includes('Database connection') || errorMessage.includes('Supabase') ? 503 : 401
+      const statusCode =
+        errorMessage.includes('Database connection') || errorMessage.includes('Supabase') ? 503 : 401
       return NextResponse.json({ error: errorMessage }, { status: statusCode })
     }
 
@@ -86,19 +120,22 @@ export async function POST(request: NextRequest) {
     if (result.token) {
       res.cookies.set('auth-token', result.token, {
         httpOnly: true,
-        secure: true,
+        secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         path: '/',
         maxAge: 60 * 60 * 24 * 7,
       })
     }
+    if (result.sessionId) {
+      setExclusiveSessionCookie(res, result.sessionId)
+    }
     return res
   } catch (error) {
     console.error('[LOGIN] Error:', error)
     return NextResponse.json(
-      { 
+      {
         error: error instanceof Error ? error.message : 'Internal server error',
-        code: 'INTERNAL_ERROR'
+        code: 'INTERNAL_ERROR',
       },
       { status: 500 }
     )

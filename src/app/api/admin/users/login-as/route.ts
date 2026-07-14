@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getSession, loginAsUser, UserRole } from '@/lib/auth'
+import { getSession, loginAsUser, UserRole, setExclusiveSessionCookie } from '@/lib/auth'
 
 export async function POST(request: Request) {
   try {
@@ -30,11 +30,14 @@ export async function POST(request: Request) {
     if (result.token) {
       res.cookies.set('auth-token', result.token, {
         httpOnly: true,
-        secure: true,
+        secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         path: '/',
         maxAge: 60 * 60 * 2,
       })
+    }
+    if (result.sessionId) {
+      setExclusiveSessionCookie(res, result.sessionId)
     }
     return res
   } catch (error) {

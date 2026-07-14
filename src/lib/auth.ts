@@ -36,6 +36,17 @@ const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'zalora-secret-key'
 )
 
+/** Cookie that holds the single active app session id (one browser at a time). */
+export const EXCLUSIVE_SESSION_COOKIE = 'zalora-sid'
+
+const SESSION_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax' as const,
+  path: '/',
+  maxAge: 60 * 60 * 24 * 7,
+}
+
 export interface JWTPayload {
   userId: string
   email: string
@@ -69,6 +80,68 @@ export async function verifyToken(token: string): Promise<JWTPayload | null> {
   }
 }
 
+/**
+ * Replace any existing sessions for this user with one new session (single-device login).
+ * Returns the session token to set in the zalora-sid cookie.
+ */
+export async function createExclusiveSession(
+  userId: string,
+  meta?: { ipAddress?: string | null; userAgent?: string | null }
+): Promise<string> {
+  const token = crypto.randomUUID()
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+
+  await supabaseAdmin.from('sessions').delete().eq('userId', userId)
+  const { error } = await supabaseAdmin.from('sessions').insert({
+    userId,
+    token,
+    expiresAt,
+    ipAddress: meta?.ipAddress ?? null,
+    userAgent: meta?.userAgent ?? null,
+  })
+  if (error) {
+    console.error('[createExclusiveSession]', error.message)
+    throw error
+  }
+  return token
+}
+
+/** True if this request's zalora-sid cookie matches the user's sole active session. */
+export async function hasValidExclusiveSession(userId: string): Promise<boolean> {
+  try {
+    const cookieStore = await cookies()
+    const sid = cookieStore.get(EXCLUSIVE_SESSION_COOKIE)?.value
+    if (!sid) return false
+
+    const { data, error } = await supabaseAdmin
+      .from('sessions')
+      .select('id, expiresAt')
+      .eq('userId', userId)
+      .eq('token', sid)
+      .maybeSingle()
+
+    if (error || !data) return false
+    if (new Date(data.expiresAt).getTime() < Date.now()) {
+      await supabaseAdmin.from('sessions').delete().eq('id', data.id)
+      return false
+    }
+    return true
+  } catch {
+    return false
+  }
+}
+
+export function setExclusiveSessionCookie(
+  res: { cookies: { set: (name: string, value: string, options?: Record<string, unknown>) => void } },
+  sessionId: string | null
+) {
+  if (sessionId) {
+    res.cookies.set(EXCLUSIVE_SESSION_COOKIE, sessionId, SESSION_COOKIE_OPTIONS)
+  } else {
+    res.cookies.set(EXCLUSIVE_SESSION_COOKIE, '', { ...SESSION_COOKIE_OPTIONS, maxAge: 0 })
+  }
+}
+
 export async function getSession(): Promise<JWTPayload | null> {
   // 1) Prefer Supabase Auth session (works on Netlify and local dev)
   try {
@@ -80,6 +153,9 @@ export async function getSession(): Promise<JWTPayload | null> {
       } = await supabase.auth.getUser()
 
       if (!error && user) {
+        if (!(await hasValidExclusiveSession(user.id))) {
+          return null
+        }
         const appUser = await getAppUserById(user.id)
         if (appUser) {
           return {
@@ -98,7 +174,10 @@ export async function getSession(): Promise<JWTPayload | null> {
   const cookieStore = await cookies()
   const token = cookieStore.get('auth-token')?.value
   if (!token) return null
-  return verifyToken(token)
+  const payload = await verifyToken(token)
+  if (!payload) return null
+  if (!(await hasValidExclusiveSession(payload.userId))) return null
+  return payload
 }
 
 /** Fetch app user (public.users + shop + settings) by id. Used by both Supabase Auth and legacy JWT. */
@@ -189,6 +268,9 @@ export async function getCurrentUser() {
         const supabase = await createSupabaseServerClient()
         const { data: { user: authUser } } = await supabase.auth.getUser()
         if (authUser?.id) {
+          if (!(await hasValidExclusiveSession(authUser.id))) {
+            return null
+          }
           const appUser = await getAppUserById(authUser.id)
           if (appUser) return appUser
         }
@@ -305,13 +387,8 @@ export async function login(email: string, password: string) {
     })
 
     // Create session record (cookie is set by the API route on the response)
-    await supabaseAdmin
-      .from('sessions')
-      .insert({
-        userId: user.id,
-        token,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      })
+    // Replace older sessions so other browsers are logged out
+    const sessionId = await createExclusiveSession(user.id)
 
     return {
       success: true,
@@ -322,6 +399,7 @@ export async function login(email: string, password: string) {
         role: user.role as UserRole,
       },
       token,
+      sessionId,
     }
   } catch (error) {
     console.error('Login function error:', error)
@@ -360,40 +438,67 @@ export async function loginAsUser(adminId: string, targetUserId: string) {
     impersonatedBy: adminId,
   })
 
+  // Impersonation becomes the sole session for the target user
+  const sessionId = await createExclusiveSession(targetUser.id)
+
   return {
     success: true,
     user: targetUser,
     token,
+    sessionId,
   }
 }
 
 export async function logout() {
-  const session = await getSession()
+  const cookieStore = await cookies()
+  const sid = cookieStore.get(EXCLUSIVE_SESSION_COOKIE)?.value
 
-  if (session) {
-    // If impersonating, return to admin (API route will set cookie on response)
-    if (session.impersonatedBy) {
-      const { data: admin } = await supabaseAdmin
-        .from('users')
-        .select('id, email, role')
-        .eq('id', session.impersonatedBy)
-        .single()
+  // Prefer JWT (bypass exclusive check) when ending impersonation
+  const jwtCookie = cookieStore.get('auth-token')?.value
+  const jwtPayload = jwtCookie ? await verifyToken(jwtCookie) : null
 
-      if (admin) {
-        const token = await createToken({
-          userId: admin.id,
-          email: admin.email,
-          role: admin.role as UserRole,
-        })
-        return { success: true, returnedToAdmin: true, token }
-      }
+  if (jwtPayload?.impersonatedBy) {
+    const { data: admin } = await supabaseAdmin
+      .from('users')
+      .select('id, email, role')
+      .eq('id', jwtPayload.impersonatedBy)
+      .single()
+
+    if (admin) {
+      const token = await createToken({
+        userId: admin.id,
+        email: admin.email,
+        role: admin.role as UserRole,
+      })
+      const sessionId = await createExclusiveSession(admin.id)
+      return { success: true, returnedToAdmin: true, token, sessionId }
     }
+  }
 
-    // Delete session from database
-    await supabaseAdmin
+  // Resolve user id from exclusive session / supabase / jwt
+  let userId: string | null = jwtPayload?.userId ?? null
+  if (!userId && sid) {
+    const { data } = await supabaseAdmin
       .from('sessions')
-      .delete()
-      .eq('userId', session.userId)
+      .select('userId')
+      .eq('token', sid)
+      .maybeSingle()
+    userId = data?.userId ?? null
+  }
+  if (!userId) {
+    try {
+      const supabase = await createSupabaseServerClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      userId = user?.id ?? null
+    } catch {
+      // ignore
+    }
+  }
+
+  if (userId) {
+    await supabaseAdmin.from('sessions').delete().eq('userId', userId)
+  } else if (sid) {
+    await supabaseAdmin.from('sessions').delete().eq('token', sid)
   }
 
   return { success: true }
@@ -451,8 +556,9 @@ export async function register(data: {
       email: user.email,
       role: user.role as UserRole,
     })
+    const sessionId = await createExclusiveSession(user.id)
 
-    return { success: true, user, token }
+    return { success: true, user, token, sessionId }
   } catch (error) {
     console.error('[REGISTER] Unexpected error:', error)
     return { 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { register } from '@/lib/auth'
+import { register, createExclusiveSession, setExclusiveSessionCookie } from '@/lib/auth'
 import { isValidEmail } from '@/lib/utils'
 import { notifyAdmins } from '@/lib/notifications'
 import { createSupabaseRouteHandlerClient, applyCookiesToResponse } from '@/lib/supabase-server'
@@ -127,6 +127,11 @@ export async function POST(request: NextRequest) {
             },
           })
           applyCookiesToResponse(response, cookiesToSet)
+          const sessionId = await createExclusiveSession(created.user.id, {
+            ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null,
+            userAgent: request.headers.get('user-agent'),
+          })
+          setExclusiveSessionCookie(response, sessionId)
           return response
         }
       } catch (e) {
@@ -155,11 +160,14 @@ export async function POST(request: NextRequest) {
     if (result.token) {
       res.cookies.set('auth-token', result.token, {
         httpOnly: true,
-        secure: true,
+        secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         path: '/',
         maxAge: 60 * 60 * 24 * 7,
       })
+    }
+    if (result.sessionId) {
+      setExclusiveSessionCookie(res, result.sessionId)
     }
     return res
   } catch (error) {
