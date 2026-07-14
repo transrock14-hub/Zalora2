@@ -1,9 +1,11 @@
 import { Suspense } from 'react'
+import { unstable_noStore as noStore } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabase'
 import { notFound } from 'next/navigation'
 import { CategoryProductsClient } from './category-products-client'
 
 export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 interface SearchParams {
   page?: string
@@ -19,6 +21,7 @@ function normalizeSlug(s: string): string {
 }
 
 async function getCategoryData(slug: string, searchParams: SearchParams) {
+  noStore()
   const slugDecoded = decodeURIComponent(slug || '').trim()
   if (!slugDecoded) return null
 

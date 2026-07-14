@@ -21,6 +21,12 @@ export function createSupabaseClient(useServiceRole = false): SupabaseClient {
     auth: {
       persistSession: false, // Server-side doesn't need session persistence
     },
+    // Next.js App Router otherwise caches fetch() to Supabase and serves stale
+    // product prices on category pages (e.g. $7 spatula after DB says $400+).
+    global: {
+      fetch: (input: RequestInfo | URL, init?: RequestInit) =>
+        fetch(input, { ...init, cache: 'no-store' }),
+    },
   })
 }
 
