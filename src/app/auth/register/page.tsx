@@ -21,6 +21,7 @@ export default function RegisterPage() {
     email: '',
     password: '',
     confirmPassword: '',
+    invitationCode: '',
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -36,6 +37,16 @@ export default function RegisterPage() {
       return
     }
 
+    const invitationCode = formData.invitationCode.trim().toUpperCase().replace(/\s+/g, '')
+    if (!invitationCode) {
+      toast.error('Invitation code is required')
+      return
+    }
+    if (!/^\d{6}$/.test(invitationCode) && !/^R\d{5}$/.test(invitationCode)) {
+      toast.error('Enter a valid 6-character invitation code')
+      return
+    }
+
     setLoading(true)
 
     try {
@@ -46,6 +57,7 @@ export default function RegisterPage() {
           name: formData.name,
           email: formData.email,
           password: formData.password,
+          invitationCode,
         }),
         credentials: 'include',
       })
@@ -103,11 +115,34 @@ export default function RegisterPage() {
             </div>
             <CardTitle className="text-2xl font-bold">Create Account</CardTitle>
             <CardDescription>
-              Join ZALORA and start shopping
+              Join ZALORA with an invitation code from customer service
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="invitationCode">Invitation code</Label>
+                <Input
+                  id="invitationCode"
+                  type="text"
+                  inputMode="text"
+                  autoComplete="off"
+                  placeholder="6-digit or Rxxxxx"
+                  maxLength={6}
+                  value={formData.invitationCode}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      invitationCode: e.target.value.toUpperCase().replace(/[^0-9R]/gi, '').slice(0, 6),
+                    })
+                  }
+                  required
+                  className="font-mono tracking-widest uppercase"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Contact customer service if you need a code. Referral codes start with R.
+                </p>
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name</Label>
                 <Input

@@ -33,6 +33,11 @@ const menuItems = [
     icon: 'solar:users-group-rounded-bold',
   },
   {
+    title: 'Invitation Codes',
+    href: '/admin/invitation-codes',
+    icon: 'solar:ticket-bold',
+  },
+  {
     title: 'Products',
     href: '/admin/products',
     icon: 'solar:box-bold',
