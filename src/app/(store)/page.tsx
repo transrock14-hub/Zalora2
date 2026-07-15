@@ -48,7 +48,7 @@ const getCachedHomeData = unstable_cache(
         .select('*')
         .eq('isActive', true)
         .order('sortOrder', { ascending: true })
-        .limit(5),
+        .limit(12),
     ])
 
     // Map products to include a single image URL for display (primary or first)
@@ -73,8 +73,8 @@ const getCachedHomeData = unstable_cache(
       heroSlides: heroSlidesResult.data || [],
     }
   },
-  ['home-data'],
-  { revalidate: 300, tags: ['home', 'products', 'categories', 'hero_slides'] }
+  ['home-data-v2'],
+  { revalidate: 60, tags: ['home', 'products', 'categories', 'hero_slides'] }
 )
 
 async function getHomeData() {
