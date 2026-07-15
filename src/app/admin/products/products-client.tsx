@@ -144,6 +144,8 @@ export function ProductsClient({
                     alt={product.name}
                     fill
                     className="object-cover"
+                    // Brand CDNs often break via Hostinger's Next optimizer
+                    unoptimized={/^https?:\/\//i.test(product.image)}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">

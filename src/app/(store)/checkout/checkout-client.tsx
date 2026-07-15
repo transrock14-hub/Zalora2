@@ -203,6 +203,7 @@ export function CheckoutClient() {
   const [selectedCryptoAddress, setSelectedCryptoAddress] = useState<CryptoAddress | null>(null)
   const [cryptoInstructions, setCryptoInstructions] = useState('')
   const [loadingCryptoAddresses, setLoadingCryptoAddresses] = useState(false)
+  const [generatedCryptoQr, setGeneratedCryptoQr] = useState<string | null>(null)
 
   // Buyers always pay admin (platform). Sellers receive order credit separately; no seller-specific payment addresses.
   useEffect(() => {
@@ -221,6 +222,28 @@ export function CheckoutClient() {
       setSelectedCryptoAddress(address || null)
     }
   }, [cryptoType, cryptoAddresses])
+
+  // Always generate QR from wallet address (admin QR URL field was removed)
+  useEffect(() => {
+    if (!selectedCryptoAddress?.address) {
+      setGeneratedCryptoQr(null)
+      return
+    }
+    let cancelled = false
+    import('qrcode')
+      .then((QRCode) =>
+        QRCode.toDataURL(selectedCryptoAddress.address, { width: 192, margin: 1 })
+      )
+      .then((url) => {
+        if (!cancelled) setGeneratedCryptoQr(url)
+      })
+      .catch(() => {
+        if (!cancelled) setGeneratedCryptoQr(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [selectedCryptoAddress?.id, selectedCryptoAddress?.address])
 
   const fetchCryptoAddresses = async (_shopId: string | null) => {
     setLoadingCryptoAddresses(true)
@@ -760,13 +783,13 @@ export function CheckoutClient() {
                               )}
                             </div>
 
-                            {/* QR Code */}
-                            {selectedCryptoAddress.qrCode && (
+                            {/* QR Code generated from wallet address */}
+                            {generatedCryptoQr && (
                               <div className="flex justify-center mb-6">
                                 <div className="bg-white p-4 rounded-lg shadow-md">
                                   <img
-                                    src={selectedCryptoAddress.qrCode}
-                                    alt="QR Code"
+                                    src={generatedCryptoQr}
+                                    alt="Payment QR Code"
                                     className="w-48 h-48 object-contain"
                                   />
                                 </div>

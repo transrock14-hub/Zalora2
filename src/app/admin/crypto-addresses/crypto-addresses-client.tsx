@@ -44,7 +44,6 @@ export function CryptoAddressesClient() {
     address: '',
     network: '',
     label: '',
-    qrCode: '',
     isActive: true,
   })
 
@@ -73,7 +72,6 @@ export function CryptoAddressesClient() {
         address: address.address,
         network: address.network || '',
         label: address.label || '',
-        qrCode: address.qrCode || '',
         isActive: address.isActive,
       })
     } else {
@@ -83,7 +81,6 @@ export function CryptoAddressesClient() {
         address: '',
         network: '',
         label: '',
-        qrCode: '',
         isActive: true,
       })
     }
@@ -103,7 +100,8 @@ export function CryptoAddressesClient() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        // QR is generated from the wallet address on checkout / deposit
+        body: JSON.stringify({ ...formData, qrCode: null }),
       })
 
       if (response.ok) {
@@ -238,16 +236,6 @@ export function CryptoAddressesClient() {
                 <Icon icon="solar:copy-bold" className="mr-2 size-4" />
                 Copy Address
               </Button>
-
-              {addr.qrCode && (
-                <div className="mt-4 pt-4 border-t border-border">
-                  <img
-                    src={addr.qrCode}
-                    alt="QR Code"
-                    className="w-full h-auto rounded"
-                  />
-                </div>
-              )}
             </div>
           ))}
         </div>
@@ -322,18 +310,6 @@ export function CryptoAddressesClient() {
                   setFormData({ ...formData, label: e.target.value })
                 }
                 placeholder="e.g., Main Wallet, Business Account"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="qrCode">QR Code URL (Optional)</Label>
-              <Input
-                id="qrCode"
-                value={formData.qrCode}
-                onChange={(e) =>
-                  setFormData({ ...formData, qrCode: e.target.value })
-                }
-                placeholder="https://example.com/qr-code.png"
               />
             </div>
 

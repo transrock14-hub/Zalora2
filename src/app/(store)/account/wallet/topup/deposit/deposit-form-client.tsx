@@ -41,22 +41,25 @@ export function DepositFormClient({ balance, currency, addresses, shopId, backHr
 
   const selected = addresses.find((a) => a.id === networkId) ?? addresses[0]
 
-  // Auto-generate QR from address when qrCode is not stored (for already added addresses)
+  // Always generate QR from address when no usable image URL stored
   useEffect(() => {
     if (!selected?.address) {
       setGeneratedQr(null)
       return
     }
-    if (selected.qrCode) {
-      setGeneratedQr(null)
-      return
+    let cancelled = false
+    import('qrcode')
+      .then((QRCode) => QRCode.toDataURL(selected.address, { width: 192, margin: 1 }))
+      .then((url) => {
+        if (!cancelled) setGeneratedQr(url)
+      })
+      .catch(() => {
+        if (!cancelled) setGeneratedQr(null)
+      })
+    return () => {
+      cancelled = true
     }
-    import('qrcode').then((QRCode) => {
-      QRCode.toDataURL(selected!.address, { width: 192, margin: 1 })
-        .then(setGeneratedQr)
-        .catch(() => setGeneratedQr(null))
-    })
-  }, [selected?.id, selected?.address, selected?.qrCode])
+  }, [selected?.id, selected?.address])
 
   const handleProofUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -164,11 +167,11 @@ export function DepositFormClient({ balance, currency, addresses, shopId, backHr
 
           {selected && (
             <>
-              {(selected.qrCode || generatedQr) && (
+              {generatedQr && (
                 <div className="flex flex-col items-center">
                   <div className="relative w-48 h-48 bg-white rounded-lg border border-border overflow-hidden">
                     <Image
-                      src={selected.qrCode || generatedQr || ''}
+                      src={generatedQr}
                       alt="QR"
                       fill
                       className="object-contain"
