@@ -33,7 +33,7 @@ async function getShopStats(shopId: string, shop: { followers?: number; totalSal
     }
   }
 
-  // Get orders that have items with products from this shop
+  // Fetch order rows for this shop (with settlement markers when available)
   const { data: orderItems } = await supabaseAdmin
     .from('order_items')
     .select(`
@@ -44,7 +44,10 @@ async function getShopStats(shopId: string, shop: { followers?: number; totalSal
       order:orders!order_items_orderId_fkey (
         createdAt,
         deliveredAt,
-        status
+        status,
+        wholesaleChargedAt,
+        salesPaidOutAt,
+        settlementRefundedAt
       )
     `)
     .in('productId', productIds)
@@ -71,6 +74,9 @@ async function getShopStats(shopId: string, shop: { followers?: number; totalSal
         createdAt: item.order?.createdAt,
         deliveredAt: item.order?.deliveredAt,
         status: item.order?.status,
+        wholesaleChargedAt: item.order?.wholesaleChargedAt,
+        salesPaidOutAt: item.order?.salesPaidOutAt,
+        settlementRefundedAt: item.order?.settlementRefundedAt,
         items: [],
       })
     }
@@ -104,44 +110,45 @@ async function getShopStats(shopId: string, shop: { followers?: number; totalSal
   // Calculate today's orders (created today)
   const todayOrders = allOrders.filter((order: any) => isInToday(order.createdAt))
 
-  // Orders that were (or would be) processed — exclude unpaid / cancelled / refunded
-  const todayProcessed = todayOrders.filter(
-    (order: any) =>
-      !['PENDING_PAYMENT', 'CANCELLED', 'REFUNDED'].includes(order.status)
-  )
+  // Wholesale was used when shipping/processing. Refunded still counts as
+  // order cost once the seller had processed the order (or it was refunded after).
+  const wasCharged = (order: any) =>
+    !!order.wholesaleChargedAt ||
+    ['SHIPPED', 'DELIVERED', 'COMPLETED', 'REFUNDED'].includes(order.status)
 
-  // Amount used to process today's orders = wholesale (costPrice × qty)
+  // Profit is realized only when Delivered/Completed (sales lump sum credited)
+  // and not reversed by a later refund.
+  const wasPaidOut = (order: any) => {
+    if (order.settlementRefundedAt || ['REFUNDED', 'CANCELLED'].includes(order.status)) {
+      return false
+    }
+    return (
+      !!order.salesPaidOutAt || ['DELIVERED', 'COMPLETED'].includes(order.status)
+    )
+  }
+
+  const todayProcessed = todayOrders.filter(wasCharged)
   const todaySales = todayProcessed.reduce((sum: number, order: any) => sum + orderWholesale(order), 0)
 
-  // Today's profit = earned when products were DELIVERED today
-  // (sales price − wholesale), matching the payout on delivery.
   const todayDelivered = allOrders.filter(
     (order: any) =>
-      ['DELIVERED', 'COMPLETED'].includes(order.status) &&
-      isInToday(order.deliveredAt || order.createdAt)
+      wasPaidOut(order) && isInToday(order.deliveredAt || order.salesPaidOutAt || order.createdAt)
   )
   const todayProfit = todayDelivered.reduce((sum: number, order: any) => sum + orderProfit(order), 0)
 
-  // Lifetime amount used to process orders = wholesale since the store opened
-  const allProcessed = allOrders.filter(
-    (order: any) =>
-      !['PENDING_PAYMENT', 'CANCELLED', 'REFUNDED'].includes(order.status)
-  )
-
+  const allProcessed = allOrders.filter(wasCharged)
   const totalSales = allProcessed.reduce((sum: number, order: any) => sum + orderWholesale(order), 0)
 
-  // Lifetime profit since store opening = sum of (sales − wholesale) for every
-  // delivered/completed order (profit is realized on delivery).
-  const allDelivered = allOrders.filter((order: any) =>
-    ['DELIVERED', 'COMPLETED'].includes(order.status)
-  )
+  const allDelivered = allOrders.filter(wasPaidOut)
   const totalProfit = allDelivered.reduce((sum: number, order: any) => sum + orderProfit(order), 0)
 
   // Get followers count
   const followersCount = shop.followers || 0
 
   // Calculate credit score
-  const completedOrders = allOrders.filter((o: any) => o.status === 'DELIVERED').length
+  const completedOrders = allOrders.filter((o: any) =>
+    ['DELIVERED', 'COMPLETED'].includes(o.status)
+  ).length
   const orderCompletionRate = allOrders.length > 0 ? (completedOrders / allOrders.length) * 100 : 0
   const creditScore = Math.min(100, Math.round(orderCompletionRate + (allOrders.length > 0 ? 20 : 0)))
 

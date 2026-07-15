@@ -307,10 +307,14 @@ export function ShopDetailsClient({ shop: initialShop, stats, userBalance }: Sho
           </div>
           <p className="text-2xl font-bold text-primary">{formatPrice(userBalance)}</p>
           <p className="text-xs text-muted-foreground mt-1">
-            Same as Account Balance and homepage. Order processing deducts wholesale; delivery credits
-            sales; order refunds return the wholesale. Top-up/withdraw requests are reviewed in Admin.
+            Same as Account Balance. Processing deducts wholesale; marking Delivered/Completed
+            credits the full sales amount (lump sum) so you keep the profit. Refunds return only
+            the wholesale deduction. Top-up/withdraw requests are reviewed in Admin.
           </p>
           <div className="flex gap-4 mt-4 text-sm">
+            <Link href="/account/billing" className="text-primary hover:underline">
+              Order money history
+            </Link>
             <Link href="/account/wallet/recharge-record" className="text-primary hover:underline">
               {t('rechargeRecord')}
             </Link>

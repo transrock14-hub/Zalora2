@@ -4,19 +4,20 @@ import { supabaseAdmin } from './supabase'
  * Wholesale settlement for the reseller (shop owner) money flow.
  *
  * Model:
- *  - When a customer's order is PAID (or when the seller processes/ships it,
- *    whichever comes first and not yet charged), the reseller PAYS the
- *    wholesale price (product.costPrice x qty) — deducted from their personal
- *    account balance (users.balance). shops.balance is kept in sync.
- *  - When the order is DELIVERED, the reseller RECEIVES the sales price
- *    (order_items.price x qty) — credited to the same balance.
- *  - When the order is REFUNDED/CANCELLED, sales payout (if any) is clawed
- *    back and the wholesale lump sum is credited back to the same balance.
+ *  - When a customer's order is PAID / SHIPPED (whichever charges first), the
+ *    reseller PAYS the wholesale price (product.costPrice × qty) — deducted
+ *    from their personal account balance (users.balance). shops.balance stays
+ *    in sync.
+ *  - When the order is DELIVERED or COMPLETED, the reseller RECEIVES the sales
+ *    lump sum (order_items.price × qty) — credited to the same balance.
+ *  - When the order is REFUNDED/CANCELLED, any sales payout is clawed back and
+ *    the wholesale deduction is credited back (balance returns to pre-order,
+ *    without the profit).
  *
- * Net profit for the reseller = sales price - wholesale price.
+ * Net profit after a successful delivery = sales − wholesale.
  *
- * Idempotency is enforced via the orders.wholesaleChargedAt / salesPaidOutAt /
- * settlementRefundedAt columns (see supabase-wholesale-settlement-migration.sql).
+ * Idempotency: orders.wholesaleChargedAt / salesPaidOutAt / settlementRefundedAt
+ * (see supabase-wholesale-settlement-migration.sql).
  */
 
 export type WholesaleSettlementCode =
@@ -227,21 +228,33 @@ async function alreadySettled(
 ): Promise<boolean> {
   const { data, error } = await supabaseAdmin
     .from('orders')
-    .select(column)
+    .select(`${column}, settlementRefundedAt`)
     .eq('id', orderId)
     .single()
   // If the column doesn't exist yet, treat as not-settled (callers guard by status).
   if (error) return false
-  return !!(data as Record<string, unknown>)?.[column]
+  const row = data as Record<string, unknown>
+  // A refund reverses money movement; charge/payout markers alone are not "active".
+  if (column !== 'settlementRefundedAt' && row?.settlementRefundedAt) {
+    return false
+  }
+  return !!row?.[column]
 }
 
 async function markSettled(
   orderId: string,
   column: 'wholesaleChargedAt' | 'salesPaidOutAt' | 'settlementRefundedAt'
 ): Promise<void> {
+  const patch: Record<string, unknown> = {
+    [column]: new Date().toISOString(),
+  }
+  // Re-opening charge/payout after a refund clears the refund marker.
+  if (column === 'wholesaleChargedAt' || column === 'salesPaidOutAt') {
+    patch.settlementRefundedAt = null
+  }
   await supabaseAdmin
     .from('orders')
-    .update({ [column]: new Date().toISOString() })
+    .update(patch as any)
     .eq('id', orderId)
   // Ignore errors (e.g. column not present yet).
 }
@@ -337,24 +350,45 @@ export async function chargeWholesaleForOrder(
 }
 
 /**
- * Pay each reseller the sales price of their items in this order.
+ * Pay each reseller the sales (lump sum) price of their items in this order.
  * Credits the shop owner's personal account balance. Idempotent.
+ * Throws on failure so admin delivery/completion can surface the error.
  */
-export async function payoutSalesForOrder(orderId: string): Promise<void> {
-  try {
-    if (await alreadySettled(orderId, 'salesPaidOutAt')) return
-
-    const items = await getOrderShopItems(orderId)
-    const totals = await amountsByOwner(items, 'sales')
-
-    for (const [ownerId, amount] of Array.from(totals.entries())) {
-      await adjustUserBalance(ownerId, amount)
-    }
-
-    await markSettled(orderId, 'salesPaidOutAt')
-  } catch (e) {
-    console.error('payoutSalesForOrder failed:', e)
+export async function payoutSalesForOrder(orderId: string): Promise<{ paid: boolean }> {
+  if (await alreadySettled(orderId, 'salesPaidOutAt')) {
+    return { paid: false }
   }
+
+  const items = await getOrderShopItems(orderId)
+  const totals = await amountsByOwner(items, 'sales')
+
+  for (const [ownerId, amount] of Array.from(totals.entries())) {
+    await adjustUserBalance(ownerId, amount)
+  }
+
+  if (totals.size > 0) {
+    await markSettled(orderId, 'salesPaidOutAt')
+  }
+
+  return { paid: totals.size > 0 }
+}
+
+/**
+ * Delivery / completion settlement:
+ * 1) Ensure wholesale was deducted (re-charge after a prior refund)
+ * 2) Credit the sales lump sum to the seller balance
+ *
+ * Net vs pre-order balance after a successful completion: +profit (sales − wholesale).
+ */
+export async function settleDeliveryForOrder(
+  orderId: string,
+  options: ChargeWholesaleOptions = {}
+): Promise<void> {
+  await chargeWholesaleForOrder(orderId, {
+    ...options,
+    strict: options.strict !== false,
+  })
+  await payoutSalesForOrder(orderId)
 }
 
 /**
@@ -434,13 +468,13 @@ export async function refundSettlementForOrder(
       }
     }
 
-    // Mark done: clear charge markers (works even if settlementRefundedAt is missing)
+    // Keep wholesaleChargedAt for order-cost stats/history. Clear sales payout
+    // marker so a later Delivered/Completed can credit the lump sum again.
     await supabaseAdmin
       .from('orders')
       .update({
-        wholesaleChargedAt: null,
-        salesPaidOutAt: null,
         settlementRefundedAt: new Date().toISOString(),
+        salesPaidOutAt: null,
       } as any)
       .eq('id', orderId)
   } catch (e) {

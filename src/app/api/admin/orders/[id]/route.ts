@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { createNotification } from '@/lib/notifications'
-import { chargeWholesaleForOrder, payoutSalesForOrder, refundSettlementForOrder, WholesaleSettlementError } from '@/lib/wholesale-settlement'
+import { chargeWholesaleForOrder, settleDeliveryForOrder, refundSettlementForOrder, WholesaleSettlementError } from '@/lib/wholesale-settlement'
 
 export async function GET(
   request: NextRequest,
@@ -99,6 +99,10 @@ export async function PATCH(
       if (status === 'DELIVERED' && !deliveredAt) {
         updateData.deliveredAt = new Date().toISOString()
       }
+      if (status === 'COMPLETED' && !deliveredAt && !body.deliveredAt) {
+        // Completion realizes the sales payout — treat like delivered for timestamps
+        updateData.deliveredAt = new Date().toISOString()
+      }
     }
 
     if (paymentStatus) {
@@ -174,6 +178,19 @@ export async function PATCH(
       }
     }
 
+    // Delivered/Completed: deduct wholesale (if needed) then credit sales lump sum
+    // BEFORE updating status, so a failed settlement does not leave a false "completed" order.
+    if (nowDelivered && !wasDelivered) {
+      try {
+        await settleDeliveryForOrder(params.id, { strict: true })
+      } catch (e) {
+        if (e instanceof WholesaleSettlementError) {
+          return NextResponse.json({ error: e.message, code: e.code }, { status: 400 })
+        }
+        throw e
+      }
+    }
+
     // Update order
     const { data: order, error: updateError } = await supabaseAdmin
       .from('orders')
@@ -200,16 +217,12 @@ export async function PATCH(
       throw updateError
     }
 
-    // Reseller money flow: pay wholesale when the order becomes paid, and
-    // receive the sales price once it is delivered/completed.
+    // Reseller money flow: charge wholesale when the order first becomes paid
+    // (if not already charged on ship). Soft-fail so payment approval still works.
     if (nowPaid && !wasPaid) {
       await chargeWholesaleForOrder(params.id, { strict: false })
     }
-    if (nowDelivered && !wasDelivered) {
-      await payoutSalesForOrder(params.id)
-    }
-    // On refund/cancel: credit wholesale back to shop/account balance (and
-    // claw back a sales payout if it was already paid).
+    // On refund/cancel: credit wholesale back (and claw back sales payout if paid).
     if (nowRefunded && !wasRefunded) {
       await refundSettlementForOrder(params.id)
     }
