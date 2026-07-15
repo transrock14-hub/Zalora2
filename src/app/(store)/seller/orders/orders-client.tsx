@@ -160,6 +160,14 @@ export function SellerOrdersClient({
                       <p className="mt-1 text-sm font-bold text-destructive">
                         Actual payment: {formatPrice(item.lumpSum)}
                       </p>
+                      {['DELIVERED', 'COMPLETED'].includes(order.status) &&
+                        item.wholesaleTotal != null && (
+                          <p className="mt-2 text-[11px] leading-snug text-muted-foreground font-normal">
+                            Balance: −{formatPrice(item.wholesaleTotal)} hold when processed, then +
+                            {formatPrice(item.wholesaleTotal)} released + {formatPrice(item.lumpSum)}{' '}
+                            lump sum when completed (net +{formatPrice(item.lumpSum)}).
+                          </p>
+                        )}
                     </div>
                   </div>
                 ))}

@@ -42,17 +42,17 @@ const typeMeta: Record<
     sign: '-',
     amountClass: 'text-foreground',
   },
-  WHOLESALE_CHARGE: {
-    icon: 'solar:shop-bold',
-    label: 'Store order cost',
-    sign: '-',
-    amountClass: 'text-red-600',
-  },
   SALES_PAYOUT: {
     icon: 'solar:wallet-money-bold',
-    label: 'Sales payout',
+    label: 'Lump sum credited',
     sign: '+',
     amountClass: 'text-green-600',
+  },
+  WHOLESALE_CHARGE: {
+    icon: 'solar:shop-bold',
+    label: 'Wholesale deducted',
+    sign: '-',
+    amountClass: 'text-red-600',
   },
   WHOLESALE_REFUND: {
     icon: 'solar:restart-bold',
@@ -113,7 +113,7 @@ export default function BillingPage() {
           <div className="hidden lg:block mb-6">
             <h1 className="text-3xl font-bold font-heading">Billing Records</h1>
             <p className="text-muted-foreground mt-2">
-              Top-ups, withdrawals, and store order wholesale charges
+              Top-ups, withdrawals, wholesale deductions (−), and lump-sum credits (+) after delivery
             </p>
           </div>
 

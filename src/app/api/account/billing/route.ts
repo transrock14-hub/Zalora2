@@ -203,11 +203,25 @@ export async function GET() {
         }
 
         if (paidOut && sales > 0 && !refunded) {
+          if (wholesale > 0) {
+            records.push({
+              id: `wholesale-release-${o.id}`,
+              type: 'WHOLESALE_REFUND',
+              reference: o.orderNumber,
+              description: `Wholesale hold released #${o.orderNumber}`,
+              amount: wholesale,
+              currency: 'USD',
+              status: 'CREDITED',
+              method: null,
+              createdAt: o.salesPaidOutAt || o.updatedAt || o.createdAt,
+              linkOrderId: o.id,
+            })
+          }
           records.push({
             id: `sales-${o.id}`,
             type: 'SALES_PAYOUT',
             reference: o.orderNumber,
-            description: `Sales payout #${o.orderNumber}`,
+            description: `Lump sum credited #${o.orderNumber}`,
             amount: sales,
             currency: 'USD',
             status: 'CREDITED',
@@ -217,7 +231,7 @@ export async function GET() {
           })
         }
 
-        if (refunded && wholesale > 0) {
+        if (refunded && wholesale > 0 && !paidOut) {
           records.push({
             id: `wholesale-refund-${o.id}`,
             type: 'WHOLESALE_REFUND',

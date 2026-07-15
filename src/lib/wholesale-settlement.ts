@@ -4,17 +4,13 @@ import { supabaseAdmin } from './supabase'
  * Wholesale settlement for the reseller (shop owner) money flow.
  *
  * Model:
- *  - When a customer's order is PAID / SHIPPED (whichever charges first), the
- *    reseller PAYS the wholesale price (product.costPrice × qty) — deducted
- *    from their personal account balance (users.balance). shops.balance stays
- *    in sync.
- *  - When the order is DELIVERED or COMPLETED, the reseller RECEIVES the sales
- *    lump sum (order_items.price × qty) — credited to the same balance.
- *  - When the order is REFUNDED/CANCELLED, any sales payout is clawed back and
- *    the wholesale deduction is credited back (balance returns to pre-order,
- *    without the profit).
- *
- * Net profit after a successful delivery = sales − wholesale.
+ *  - When the order is processed/shipped, wholesale (costPrice × qty) is
+ *    temporarily deducted from the shop owner's balance (working-capital hold).
+ *  - When the order is DELIVERED or COMPLETED, that hold is released and the
+ *    full sales lump sum (order_items.price × qty) is credited.
+ *    Net vs pre-order balance: +lump sum (sales).
+ *  - When REFUNDED/CANCELLED before delivery: wholesale hold is returned.
+ *    After delivery: only the sales lump sum is clawed back.
  *
  * Idempotency: orders.wholesaleChargedAt / salesPaidOutAt / settlementRefundedAt
  * (see supabase-wholesale-settlement-migration.sql).
@@ -350,9 +346,9 @@ export async function chargeWholesaleForOrder(
 }
 
 /**
- * Pay each reseller the sales (lump sum) price of their items in this order.
- * Credits the shop owner's personal account balance. Idempotent.
- * Throws on failure so admin delivery/completion can surface the error.
+ * Pay each reseller the sales (lump sum) price only.
+ * Prefer settleDeliveryForOrder on Delivered/Completed — that also releases
+ * the wholesale hold so the net credit is the full lump sum vs pre-order balance.
  */
 export async function payoutSalesForOrder(orderId: string): Promise<{ paid: boolean }> {
   if (await alreadySettled(orderId, 'salesPaidOutAt')) {
@@ -375,10 +371,11 @@ export async function payoutSalesForOrder(orderId: string): Promise<{ paid: bool
 
 /**
  * Delivery / completion settlement:
- * 1) Ensure wholesale was deducted (re-charge after a prior refund)
- * 2) Credit the sales lump sum to the seller balance
+ * 1) Ensure wholesale hold was deducted (re-charge after a prior refund)
+ * 2) Release the wholesale hold AND credit the sales lump sum
  *
- * Net vs pre-order balance after a successful completion: +profit (sales − wholesale).
+ * Net vs pre-order balance: +lump sum (sales).
+ * Example: $800 top-up → −$545.83 hold → +$545.83 release + $655 sales → $1,455.
  */
 export async function settleDeliveryForOrder(
   orderId: string,
@@ -388,7 +385,31 @@ export async function settleDeliveryForOrder(
     ...options,
     strict: options.strict !== false,
   })
-  await payoutSalesForOrder(orderId)
+
+  if (await alreadySettled(orderId, 'salesPaidOutAt')) {
+    return
+  }
+
+  const items = await getOrderShopItems(orderId)
+  const wholesaleMap = await amountsByOwner(items, 'wholesale')
+  const salesMap = await amountsByOwner(items, 'sales')
+
+  const ownerIds = new Set<string>([
+    ...Array.from(wholesaleMap.keys()),
+    ...Array.from(salesMap.keys()),
+  ])
+
+  for (const ownerId of Array.from(ownerIds)) {
+    const releaseHold = wholesaleMap.get(ownerId) ?? 0
+    const lumpSum = salesMap.get(ownerId) ?? 0
+    // Release temporary wholesale hold + credit full sales (lump sum)
+    const credit = releaseHold + lumpSum
+    if (credit > 0) {
+      await adjustUserBalance(ownerId, credit)
+    }
+  }
+
+  await markSettled(orderId, 'salesPaidOutAt')
 }
 
 /**
@@ -409,20 +430,16 @@ export async function getSettlementAmountsForOwner(
 }
 
 /**
- * When an order is refunded/cancelled, restore the shop AND account balance:
- *  - Claw back any sales payout already credited on delivery
- *  - Credit back the wholesale amount that was deducted to process the order
- *
- * Both users.balance and shops.balance stay identical (via adjustUserBalance).
- * Idempotent: uses settlementRefundedAt when present, otherwise clears the
- * charge/payout timestamps after reversing so a second call is a no-op.
+ * When an order is refunded/cancelled:
+ *  - Before delivery: return the wholesale hold
+ *  - After delivery: claw back the sales lump sum only (hold was already
+ *    released as part of completion, so do not credit wholesale again)
  */
 export async function refundSettlementForOrder(
   orderId: string
 ): Promise<{ refundedWholesale: number; clawedBackSales: number }> {
   const result = { refundedWholesale: 0, clawedBackSales: 0 }
   try {
-    // Prefer explicit refund marker when the column exists
     const refundedCheck = await supabaseAdmin
       .from('orders')
       .select('settlementRefundedAt')
@@ -446,7 +463,6 @@ export async function refundSettlementForOrder(
     const wholesaleWasCharged = !!(order as any)?.wholesaleChargedAt
     const salesWerePaid = !!(order as any)?.salesPaidOutAt
 
-    // Nothing was ever moved for this order — don't invent credits
     if (!wholesaleWasCharged && !salesWerePaid) return result
 
     const items = await getOrderShopItems(orderId)
@@ -454,22 +470,18 @@ export async function refundSettlementForOrder(
     const wholesaleMap = await amountsByOwner(items, 'wholesale')
 
     if (salesWerePaid) {
+      // Completion credited (wholesale release + sales). Reverse net = claw sales only.
       for (const [ownerId, amount] of Array.from(salesMap.entries())) {
-        // Clawback must always apply even if seller already spent the payout.
         await adjustUserBalance(ownerId, -amount, { allowNegative: true })
         result.clawedBackSales += amount
       }
-    }
-
-    if (wholesaleWasCharged) {
+    } else if (wholesaleWasCharged) {
       for (const [ownerId, amount] of Array.from(wholesaleMap.entries())) {
         await adjustUserBalance(ownerId, amount)
         result.refundedWholesale += amount
       }
     }
 
-    // Keep wholesaleChargedAt for order-cost stats/history. Clear sales payout
-    // marker so a later Delivered/Completed can credit the lump sum again.
     await supabaseAdmin
       .from('orders')
       .update({
