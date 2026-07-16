@@ -133,7 +133,22 @@ export async function consumeInvitationCode(
   }
 }
 
-/** Validate unused code without consuming (for pre-check). */
+export async function applyInvitationCodeToUser(
+  userId: string,
+  rawCode: string
+): Promise<{ referrerUserId: string | null; code: string }> {
+  const consumed = await consumeInvitationCode(rawCode, userId)
+  const patch: Record<string, string | null> = {
+    invitationCodeUsed: consumed.code,
+    referredByUserId: consumed.referrerUserId,
+  }
+  const { error } = await supabaseAdmin.from('users').update(patch).eq('id', userId)
+  if (error) {
+    console.warn('[invitation-codes] Could not store referral fields on user:', error.message)
+  }
+  return { referrerUserId: consumed.referrerUserId, code: consumed.code }
+}
+
 export async function assertInvitationCodeAvailable(rawCode: string): Promise<void> {
   const code = normalizeInvitationCode(rawCode)
   if (!isValidInvitationCodeFormat(code)) {

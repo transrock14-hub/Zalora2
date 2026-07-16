@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { getCurrentUser } from '@/lib/auth'
 import { ShopStatus } from '@/lib/auth'
+import {
+  applyInvitationCodeToUser,
+  assertInvitationCodeAvailable,
+  isValidInvitationCodeFormat,
+  normalizeInvitationCode,
+} from '@/lib/invitation-codes'
 
 export async function POST(req: NextRequest) {
   try {
@@ -57,6 +63,42 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    const { data: userRow } = await supabaseAdmin
+      .from('users')
+      .select('invitationCodeUsed')
+      .eq('id', currentUser.id)
+      .maybeSingle()
+
+    let resolvedInviteCode = userRow?.invitationCodeUsed
+      ? String(userRow.invitationCodeUsed).trim()
+      : null
+
+    let pendingInviteCode: string | null = null
+    if (!resolvedInviteCode) {
+      const rawInvite = typeof inviteCode === 'string' ? inviteCode.trim() : ''
+      if (!rawInvite) {
+        return NextResponse.json(
+          { error: 'Invitation code is required to apply for a shop' },
+          { status: 400 }
+        )
+      }
+      pendingInviteCode = normalizeInvitationCode(rawInvite)
+      if (!isValidInvitationCodeFormat(pendingInviteCode)) {
+        return NextResponse.json(
+          { error: 'Invitation code must be 6 digits, or R followed by 5 digits (referral)' },
+          { status: 400 }
+        )
+      }
+      try {
+        await assertInvitationCodeAvailable(pendingInviteCode)
+      } catch (e) {
+        return NextResponse.json(
+          { error: e instanceof Error ? e.message : 'Invalid invitation code' },
+          { status: 400 }
+        )
+      }
+    }
+
     // Check if slug already exists
     const { data: existing } = await supabaseAdmin
       .from('shops')
@@ -95,7 +137,7 @@ export async function POST(req: NextRequest) {
         userId: currentUser.id,
         contactName: String(contactName).trim(),
         idNumber: String(idNumber).trim(),
-        inviteCode: inviteCode ? String(inviteCode).trim() : null,
+        inviteCode: resolvedInviteCode || pendingInviteCode,
         idCardFront: idCardFront || null,
         idCardBack: idCardBack || null,
         mainBusiness: mainBusiness ? String(mainBusiness).trim() : null,
@@ -106,6 +148,24 @@ export async function POST(req: NextRequest) {
     if (verificationError) {
       await supabaseAdmin.from('shops').delete().eq('id', shop.id)
       throw verificationError
+    }
+
+    if (pendingInviteCode) {
+      try {
+        const applied = await applyInvitationCodeToUser(currentUser.id, pendingInviteCode)
+        resolvedInviteCode = applied.code
+        await supabaseAdmin
+          .from('shop_verifications')
+          .update({ inviteCode: applied.code })
+          .eq('shopId', shop.id)
+      } catch (e) {
+        await supabaseAdmin.from('shop_verifications').delete().eq('shopId', shop.id)
+        await supabaseAdmin.from('shops').delete().eq('id', shop.id)
+        return NextResponse.json(
+          { error: e instanceof Error ? e.message : 'Invitation code could not be used' },
+          { status: 400 }
+        )
+      }
     }
 
     return NextResponse.json({ shop })

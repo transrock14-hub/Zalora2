@@ -165,13 +165,24 @@ export function CreateShopClient({ categories }: CreateShopClientProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    const inviteCode = formData.inviteCode.trim().toUpperCase().replace(/\s+/g, '')
+    if (!inviteCode) {
+      toast.error('Invitation code is required')
+      return
+    }
+    if (!/^\d{6}$/.test(inviteCode) && !/^R\d{5}$/.test(inviteCode)) {
+      toast.error('Enter a valid 6-character invitation code')
+      return
+    }
+
     setLoading(true)
 
     try {
       const res = await fetch('/api/seller/shop', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, inviteCode }),
         credentials: 'include',
       })
 
@@ -289,13 +300,27 @@ export function CreateShopClient({ categories }: CreateShopClientProps) {
             </div>
 
             <div>
-              <Label htmlFor="inviteCode">Invite Code (optional)</Label>
+              <Label htmlFor="inviteCode">* Invitation code</Label>
               <Input
                 id="inviteCode"
+                type="text"
+                inputMode="text"
+                autoComplete="off"
+                placeholder="6-digit or Rxxxxx"
+                maxLength={6}
                 value={formData.inviteCode}
-                onChange={(e) => setFormData((p) => ({ ...p, inviteCode: e.target.value }))}
-                placeholder="Please enter the invitation code"
+                onChange={(e) =>
+                  setFormData((p) => ({
+                    ...p,
+                    inviteCode: e.target.value.toUpperCase().replace(/[^0-9R]/gi, '').slice(0, 6),
+                  }))
+                }
+                required
+                className="font-mono tracking-widest uppercase"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Contact customer service if you need a code. Referral codes start with R.
+              </p>
             </div>
 
             <div>

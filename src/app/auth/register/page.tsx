@@ -21,12 +21,11 @@ export default function RegisterPage() {
     email: '',
     password: '',
     confirmPassword: '',
-    invitationCode: '',
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (formData.password !== formData.confirmPassword) {
       toast.error('Passwords do not match')
       return
@@ -34,16 +33,6 @@ export default function RegisterPage() {
 
     if (formData.password.length < 6) {
       toast.error('Password must be at least 6 characters')
-      return
-    }
-
-    const invitationCode = formData.invitationCode.trim().toUpperCase().replace(/\s+/g, '')
-    if (!invitationCode) {
-      toast.error('Invitation code is required')
-      return
-    }
-    if (!/^\d{6}$/.test(invitationCode) && !/^R\d{5}$/.test(invitationCode)) {
-      toast.error('Enter a valid 6-character invitation code')
       return
     }
 
@@ -57,7 +46,6 @@ export default function RegisterPage() {
           name: formData.name,
           email: formData.email,
           password: formData.password,
-          invitationCode,
         }),
         credentials: 'include',
       })
@@ -72,13 +60,22 @@ export default function RegisterPage() {
       if (!res.ok) {
         const message =
           data.error ||
-          (res.status === 429 ? 'Too many attempts. Please wait a few minutes and try again.' : res.status === 400 ? 'Invalid request. Check your details and try again.' : 'Registration failed')
+          (res.status === 429
+            ? 'Too many attempts. Please wait a few minutes and try again.'
+            : res.status === 400
+              ? 'Invalid request. Check your details and try again.'
+              : 'Registration failed')
         throw new Error(message)
       }
 
-      // Registration succeeded — use user from response (don't rely on /api/auth/me
-      // which can fail to see the new session on Netlify/serverless)
-      if (data.user && typeof data.user === 'object' && 'id' in data.user && 'email' in data.user && 'name' in data.user && 'role' in data.user) {
+      if (
+        data.user &&
+        typeof data.user === 'object' &&
+        'id' in data.user &&
+        'email' in data.user &&
+        'name' in data.user &&
+        'role' in data.user
+      ) {
         setUser(data.user as Parameters<typeof setUser>[0])
       }
       toast.success('Account created successfully!')
@@ -92,7 +89,6 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
       <header className="bg-primary px-4 py-3 flex items-center gap-3">
         <Link href="/" className="text-white">
           <Icon icon="solar:arrow-left-linear" className="size-6" />
@@ -114,35 +110,10 @@ export default function RegisterPage() {
               />
             </div>
             <CardTitle className="text-2xl font-bold">Create Account</CardTitle>
-            <CardDescription>
-              Join ZALORA with an invitation code from customer service
-            </CardDescription>
+            <CardDescription>Join ZALORA and start shopping</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="invitationCode">Invitation code</Label>
-                <Input
-                  id="invitationCode"
-                  type="text"
-                  inputMode="text"
-                  autoComplete="off"
-                  placeholder="6-digit or Rxxxxx"
-                  maxLength={6}
-                  value={formData.invitationCode}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      invitationCode: e.target.value.toUpperCase().replace(/[^0-9R]/gi, '').slice(0, 6),
-                    })
-                  }
-                  required
-                  className="font-mono tracking-widest uppercase"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Contact customer service if you need a code. Referral codes start with R.
-                </p>
-              </div>
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name</Label>
                 <Input

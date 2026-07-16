@@ -4,34 +4,12 @@ import { isValidEmail } from '@/lib/utils'
 import { notifyAdmins } from '@/lib/notifications'
 import { createSupabaseRouteHandlerClient, applyCookiesToResponse } from '@/lib/supabase-server'
 import { supabaseAdmin } from '@/lib/supabase'
-import {
-  assertInvitationCodeAvailable,
-  consumeInvitationCode,
-  normalizeInvitationCode,
-} from '@/lib/invitation-codes'
 
 const SUPABASE_AUTH_PASSWORD_PLACEHOLDER = '$supabase-auth$'
 
-async function applyInviteToUser(
-  userId: string,
-  invitationCode: string
-): Promise<{ referrerUserId: string | null; code: string }> {
-  const consumed = await consumeInvitationCode(invitationCode, userId)
-  const patch: Record<string, string | null> = {
-    invitationCodeUsed: consumed.code,
-    referredByUserId: consumed.referrerUserId,
-  }
-  const { error } = await supabaseAdmin.from('users').update(patch).eq('id', userId)
-  if (error) {
-    // Columns may be missing if migration not run — still keep code consumed
-    console.warn('[REGISTER] Could not store referral fields on user:', error.message)
-  }
-  return { referrerUserId: consumed.referrerUserId, code: consumed.code }
-}
-
 export async function POST(request: NextRequest) {
   try {
-    let body: { name?: string; email?: string; password?: string; invitationCode?: string }
+    let body: { name?: string; email?: string; password?: string }
     try {
       body = await request.json()
     } catch {
@@ -43,19 +21,10 @@ export async function POST(request: NextRequest) {
     const name = typeof body?.name === 'string' ? body.name.trim() : ''
     const email = typeof body?.email === 'string' ? body.email.trim() : ''
     const password = typeof body?.password === 'string' ? body.password : ''
-    const invitationCode =
-      typeof body?.invitationCode === 'string' ? normalizeInvitationCode(body.invitationCode) : ''
 
     if (!name || !email || !password) {
       return NextResponse.json(
         { error: 'Name, email, and password are required' },
-        { status: 400 }
-      )
-    }
-
-    if (!invitationCode) {
-      return NextResponse.json(
-        { error: 'A valid invitation code is required to register' },
         { status: 400 }
       )
     }
@@ -78,15 +47,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Database not configured. Please set Supabase environment variables.', code: 'DATABASE_NOT_CONFIGURED' },
         { status: 503 }
-      )
-    }
-
-    try {
-      await assertInvitationCodeAvailable(invitationCode)
-    } catch (e) {
-      return NextResponse.json(
-        { error: e instanceof Error ? e.message : 'Invalid invitation code' },
-        { status: 400 }
       )
     }
 
@@ -141,27 +101,6 @@ export async function POST(request: NextRequest) {
           }
 
           try {
-            await applyInviteToUser(created.user.id, invitationCode)
-          } catch (inviteErr) {
-            console.error('[REGISTER] Invite consume failed, rolling back user:', inviteErr)
-            try {
-              await supabaseAdmin.from('users').delete().eq('id', created.user.id)
-              await supabaseAdmin.auth.admin.deleteUser(created.user.id)
-            } catch (rollbackErr) {
-              console.error('[REGISTER] Rollback after invite failure:', rollbackErr)
-            }
-            return NextResponse.json(
-              {
-                error:
-                  inviteErr instanceof Error
-                    ? inviteErr.message
-                    : 'Invitation code could not be used. Please try again with a new code.',
-              },
-              { status: 400 }
-            )
-          }
-
-          try {
             await notifyAdmins({
               title: 'New user registered',
               message: `${name} (${email}) just signed up`,
@@ -206,28 +145,6 @@ export async function POST(request: NextRequest) {
       const errorMessage = result.error || 'Registration failed'
       const statusCode = errorMessage.includes('Database connection') || errorMessage.includes('Supabase') ? 503 : 400
       return NextResponse.json({ error: errorMessage }, { status: statusCode })
-    }
-
-    if (result.user?.id) {
-      try {
-        await applyInviteToUser(result.user.id, invitationCode)
-      } catch (inviteErr) {
-        console.error('[REGISTER] Legacy invite consume failed, rolling back user:', inviteErr)
-        try {
-          await supabaseAdmin.from('users').delete().eq('id', result.user.id)
-        } catch (rollbackErr) {
-          console.error('[REGISTER] Legacy rollback failed:', rollbackErr)
-        }
-        return NextResponse.json(
-          {
-            error:
-              inviteErr instanceof Error
-                ? inviteErr.message
-                : 'Invitation code could not be used. Please try again with a new code.',
-          },
-          { status: 400 }
-        )
-      }
     }
 
     try {
