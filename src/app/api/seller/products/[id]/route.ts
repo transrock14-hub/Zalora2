@@ -62,7 +62,7 @@ export async function GET(
 }
 
 export async function PUT(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
@@ -72,7 +72,6 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get user with shop
     const { data: user } = await supabaseAdmin
       .from('users')
       .select('shops (*)')
@@ -85,10 +84,9 @@ export async function PUT(
 
     const shop = user.shops[0]
 
-    // Verify product belongs to user's shop
     const { data: existingProduct, error: existingError } = await supabaseAdmin
       .from('products')
-      .select('shopId, slug')
+      .select('shopId')
       .eq('id', params.id)
       .single()
 
@@ -100,83 +98,13 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
-    const body = await req.json()
-    const {
-      name,
-      slug,
-      description,
-      price,
-      comparePrice,
-      stock,
-      sku,
-      categoryId,
-      status,
-      images,
-    } = body
-
-    // If slug is being updated, check if it's already taken
-    if (slug && slug !== existingProduct.slug) {
-      const { data: slugExists } = await supabaseAdmin
-        .from('products')
-        .select('id')
-        .eq('slug', slug)
-        .neq('id', params.id)
-        .single()
-
-      if (slugExists) {
-        return NextResponse.json({ error: 'Slug already exists' }, { status: 400 })
-      }
-    }
-
-    // Build update data
-    const updateData: any = {}
-    if (name !== undefined) updateData.name = name
-    if (slug !== undefined) updateData.slug = slug
-    if (description !== undefined) updateData.description = description
-    if (price !== undefined) updateData.price = price
-    if (comparePrice !== undefined) updateData.comparePrice = comparePrice
-    if (stock !== undefined) updateData.stock = stock
-    if (sku !== undefined) updateData.sku = sku
-    if (categoryId !== undefined) updateData.categoryId = categoryId || null
-    if (status !== undefined) updateData.status = status
-
-    // Update product
-    const { data: product, error: updateError } = await supabaseAdmin
-      .from('products')
-      .update(updateData)
-      .eq('id', params.id)
-      .select()
-      .single()
-
-    if (updateError) {
-      throw updateError
-    }
-
-    // Update images if provided
-    if (images && Array.isArray(images)) {
-      // Delete existing images
-      await supabaseAdmin
-        .from('product_images')
-        .delete()
-        .eq('productId', params.id)
-
-      // Create new images
-      if (images.length > 0) {
-        const imageInserts = images.map((url: string, index: number) => ({
-          productId: params.id,
-          url,
-          alt: name || product?.name || 'Product image',
-          isPrimary: index === 0,
-          sortOrder: index,
-        }))
-
-        await supabaseAdmin
-          .from('product_images')
-          .insert(imageInserts)
-      }
-    }
-
-    return NextResponse.json({ product })
+    return NextResponse.json(
+      {
+        error:
+          'Merchants cannot edit product details. Catalog products are managed by admin. Use Wholesale Management to add products to your store.',
+      },
+      { status: 403 }
+    )
   } catch (error) {
     console.error('Error updating product:', error)
     return NextResponse.json({ error: 'Failed to update product' }, { status: 500 })

@@ -307,10 +307,9 @@ export function ShopDetailsClient({ shop: initialShop, stats, userBalance }: Sho
           </div>
           <p className="text-2xl font-bold text-primary">{formatPrice(userBalance)}</p>
           <p className="text-xs text-muted-foreground mt-1">
-            Same as Account Balance. Processing holds wholesale temporarily; Delivered/Completed
-            releases that hold and credits the full sales lump sum (net +lump sum on your balance).
-            Refunds before delivery return the hold; after delivery they reverse the lump sum.
-            Top-up/withdraw requests are reviewed in Admin.
+            Same as Account Balance. Processing deducts wholesale (actual payment); Delivered/Completed
+            credits the lump sum (wholesale + profit). Refunds restore your balance. Top-up/withdraw
+            requests are reviewed in Admin.
           </p>
           <div className="flex gap-4 mt-4 text-sm">
             <Link href="/account/billing" className="text-primary hover:underline">

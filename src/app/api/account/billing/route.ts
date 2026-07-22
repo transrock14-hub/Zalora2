@@ -203,20 +203,6 @@ export async function GET() {
         }
 
         if (paidOut && sales > 0 && !refunded) {
-          if (wholesale > 0) {
-            records.push({
-              id: `wholesale-release-${o.id}`,
-              type: 'WHOLESALE_REFUND',
-              reference: o.orderNumber,
-              description: `Wholesale hold released #${o.orderNumber}`,
-              amount: wholesale,
-              currency: 'USD',
-              status: 'CREDITED',
-              method: null,
-              createdAt: o.salesPaidOutAt || o.updatedAt || o.createdAt,
-              linkOrderId: o.id,
-            })
-          }
           records.push({
             id: `sales-${o.id}`,
             type: 'SALES_PAYOUT',
@@ -244,6 +230,35 @@ export async function GET() {
             createdAt: o.settlementRefundedAt || o.updatedAt || o.createdAt,
             linkOrderId: o.id,
           })
+        }
+
+        if (refunded && paidOut && sales > 0) {
+          records.push({
+            id: `sales-clawback-${o.id}`,
+            type: 'ORDER',
+            reference: o.orderNumber,
+            description: `Lump sum reversed #${o.orderNumber}`,
+            amount: sales,
+            currency: 'USD',
+            status: 'REFUNDED',
+            method: null,
+            createdAt: o.settlementRefundedAt || o.updatedAt || o.createdAt,
+            linkOrderId: o.id,
+          })
+          if (wholesale > 0) {
+            records.push({
+              id: `wholesale-refund-after-${o.id}`,
+              type: 'WHOLESALE_REFUND',
+              reference: o.orderNumber,
+              description: `Wholesale returned after refund #${o.orderNumber}`,
+              amount: wholesale,
+              currency: 'USD',
+              status: 'REFUNDED',
+              method: null,
+              createdAt: o.settlementRefundedAt || o.updatedAt || o.createdAt,
+              linkOrderId: o.id,
+            })
+          }
         }
       }
     }

@@ -6,35 +6,6 @@ import { SellerAddFromCatalogClient } from '../add-from-catalog-client'
 
 export const dynamic = 'force-dynamic'
 
-async function getProduct(id: string, shopId: string) {
-  if (id === 'new') {
-    return null
-  }
-
-  // Get product and verify it belongs to this shop
-  const { data: product, error } = await supabaseAdmin
-    .from('products')
-    .select(`
-      *,
-      images:product_images (*)
-    `)
-    .eq('id', id)
-    .eq('shopId', shopId)
-    .single()
-
-  if (error || !product) {
-    return null
-  }
-
-  // Sort images by sortOrder
-  const sortedImages = (product.images || []).sort((a: any, b: any) => a.sortOrder - b.sortOrder)
-
-  return {
-    ...product,
-    images: sortedImages,
-  }
-}
-
 async function getFormData() {
   const { data: categories, error } = await supabaseAdmin
     .from('categories')
@@ -131,6 +102,12 @@ export default async function SellerProductPage({
 
   const isNew = params.id === 'new'
 
+  // Merchants cannot edit product details — only admin manages catalog pricing/content.
+  // Existing IDs redirect to the store listing; "new" still allows add-from-catalog / upload when allowed.
+  if (!isNew) {
+    redirect('/seller/products')
+  }
+
   if (isNew) {
     const { data: settingRow } = await supabaseAdmin
       .from('settings')
@@ -154,27 +131,10 @@ export default async function SellerProductPage({
         />
       )
     }
+
+    const formData = await getFormData()
+    return <SellerProductFormClient product={null} categories={formData.categories} />
   }
 
-  const [product, formData] = await Promise.all([
-    getProduct(params.id, shop.id),
-    getFormData(),
-  ])
-
-  // If editing and product not found, redirect
-  if (params.id !== 'new' && !product) {
-    redirect('/seller/products')
-  }
-
-  // Convert Decimal fields to numbers for client component
-  const productData = product
-    ? {
-        ...product,
-        price: Number(product.price),
-        comparePrice: product.comparePrice ? Number(product.comparePrice) : null,
-        costPrice: product.costPrice ? Number(product.costPrice) : null,
-      }
-    : null
-
-  return <SellerProductFormClient product={productData} categories={formData.categories} />
+  redirect('/seller/products')
 }

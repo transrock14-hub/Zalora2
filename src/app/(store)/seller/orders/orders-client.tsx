@@ -158,14 +158,22 @@ export function SellerOrdersClient({
                         )}
                       </div>
                       <p className="mt-1 text-sm font-bold text-destructive">
-                        Actual payment: {formatPrice(item.lumpSum)}
+                        Actual payment:{' '}
+                        {formatPrice(item.wholesaleTotal != null ? item.wholesaleTotal : item.lumpSum)}
                       </p>
                       {['DELIVERED', 'COMPLETED'].includes(order.status) &&
                         item.wholesaleTotal != null && (
                           <p className="mt-2 text-[11px] leading-snug text-muted-foreground font-normal">
-                            Balance: −{formatPrice(item.wholesaleTotal)} hold when processed, then +
-                            {formatPrice(item.wholesaleTotal)} released + {formatPrice(item.lumpSum)}{' '}
-                            lump sum when completed (net +{formatPrice(item.lumpSum)}).
+                            Balance: −{formatPrice(item.wholesaleTotal)} when processed, then +
+                            {formatPrice(item.lumpSum)} lump sum when delivered (net +
+                            {formatPrice(item.profit ?? item.lumpSum - item.wholesaleTotal)}).
+                          </p>
+                        )}
+                      {['SHIPPED', 'PROCESSING', 'PAID'].includes(order.status) &&
+                        item.wholesaleTotal != null && (
+                          <p className="mt-2 text-[11px] leading-snug text-muted-foreground font-normal">
+                            On delivery you receive the lump sum ({formatPrice(item.lumpSum)} = wholesale +
+                            profit).
                           </p>
                         )}
                     </div>

@@ -58,7 +58,9 @@ export function SellerProductsClient({
           </Link>
           <div>
             <h1 className="text-2xl font-bold font-heading">Product Management</h1>
-            <p className="text-muted-foreground mt-1">Manage your product catalog</p>
+            <p className="text-muted-foreground mt-1">
+              Products in your store (added from Wholesale). Catalog edits are admin-only.
+            </p>
           </div>
         </div>
       </div>
@@ -148,20 +150,11 @@ export function SellerProductsClient({
                     </Badge>
                   )}
                 </div>
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Link href={`/seller/products/${product.id}`}>
-                    <Button size="icon" variant="secondary">
-                      <Icon icon="solar:pen-bold" className="size-4" />
-                    </Button>
-                  </Link>
-                </div>
               </div>
               <CardContent className="p-4">
-                <Link href={`/seller/products/${product.id}`}>
-                  <h3 className="font-medium text-sm line-clamp-2 hover:text-primary transition-colors">
-                    {product.name}
-                  </h3>
-                </Link>
+                <h3 className="font-medium text-sm line-clamp-2">
+                  {product.name}
+                </h3>
                 <p className="text-xs text-muted-foreground mt-1">{product.categoryName}</p>
                 <div className="mt-2 space-y-1">
                   <div className="flex justify-between text-sm">
