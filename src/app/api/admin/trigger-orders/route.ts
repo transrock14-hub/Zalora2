@@ -15,9 +15,28 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { productId } = body
+    const { productId, customerUserId } = body
     if (!productId || typeof productId !== 'string') {
       return NextResponse.json({ error: 'productId is required' }, { status: 400 })
+    }
+    if (!customerUserId || typeof customerUserId !== 'string') {
+      return NextResponse.json(
+        { error: 'Select a customer to assign this order to' },
+        { status: 400 }
+      )
+    }
+
+    const { data: customer, error: customerErr } = await supabaseAdmin
+      .from('users')
+      .select('id, name, email, role, status')
+      .eq('id', customerUserId)
+      .maybeSingle()
+
+    if (customerErr || !customer) {
+      return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
+    }
+    if (customer.status && customer.status !== 'ACTIVE') {
+      return NextResponse.json({ error: 'Customer account is not active' }, { status: 400 })
     }
 
     const { data: product, error: productErr } = await supabaseAdmin
@@ -65,7 +84,7 @@ export async function POST(req: NextRequest) {
     const { data: order, error: orderErr } = await supabaseAdmin
       .from('orders')
       .insert({
-        userId: auth.userId,
+        userId: customer.id,
         shopId,
         orderNumber,
         subtotal,
@@ -76,7 +95,14 @@ export async function POST(req: NextRequest) {
         status: 'PAID',
         paymentStatus: 'COMPLETED',
         paymentMethod: 'BANK_TRANSFER',
-        notes: JSON.stringify({ triggeredBy: 'admin', adminTrigger: true }),
+        notes: JSON.stringify({
+          triggeredBy: 'admin',
+          adminTrigger: true,
+          adminUserId: auth.userId,
+          customerUserId: customer.id,
+          customerName: customer.name,
+          customerEmail: customer.email,
+        }),
       })
       .select('id, orderNumber')
       .single()
@@ -107,6 +133,7 @@ export async function POST(req: NextRequest) {
       success: true,
       orderId: (order as any).id,
       orderNumber: (order as any).orderNumber,
+      customer: { id: customer.id, name: customer.name, email: customer.email },
       message: 'Order triggered. Seller notified.',
     })
   } catch (e) {

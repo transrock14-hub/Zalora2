@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { Icon } from '@iconify/react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
 import { formatPrice } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
@@ -26,12 +27,19 @@ interface Shop {
   name: string
 }
 
+interface Customer {
+  id: string
+  name: string
+  email: string
+}
+
 interface TriggerOrdersClientProps {
   products: Product[]
   total: number
   pages: number
   page: number
   shops: Shop[]
+  customers: Customer[]
   searchParams: { shop?: string }
 }
 
@@ -41,26 +49,50 @@ export function TriggerOrdersClient({
   pages,
   page,
   shops,
+  customers,
   searchParams,
 }: TriggerOrdersClientProps) {
   const router = useRouter()
   const [triggeringId, setTriggeringId] = useState<string | null>(null)
+  const [customerUserId, setCustomerUserId] = useState('')
+  const [customerSearch, setCustomerSearch] = useState('')
+
+  const filteredCustomers = customers.filter((c) => {
+    const q = customerSearch.trim().toLowerCase()
+    if (!q) return true
+    return (
+      c.name.toLowerCase().includes(q) ||
+      c.email.toLowerCase().includes(q)
+    )
+  })
+
+  const selectedCustomer = customers.find((c) => c.id === customerUserId)
 
   const handleTrigger = async (product: Product) => {
+    if (!customerUserId) {
+      toast.error('Select a customer before triggering an order')
+      return
+    }
+
     setTriggeringId(product.id)
     try {
       const res = await fetch('/api/admin/trigger-orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ productId: product.id }),
+        body: JSON.stringify({
+          productId: product.id,
+          customerUserId,
+        }),
       })
       const data = await res.json()
       if (!res.ok) {
         toast.error(data.error || 'Failed to trigger order')
         return
       }
-      toast.success(`Order ${data.orderNumber} triggered. Seller notified.`)
+      toast.success(
+        `Order ${data.orderNumber} assigned to ${selectedCustomer?.name || 'customer'}. Seller notified.`
+      )
       router.refresh()
     } catch {
       toast.error('Something went wrong')
@@ -73,12 +105,51 @@ export function TriggerOrdersClient({
     <div className="space-y-6 pb-20 lg:pb-0">
       <div>
         <h1 className="text-2xl font-bold font-heading">Trigger orders</h1>
-        <p className="text-muted-foreground text-sm">Simulate an order to a shop. Seller receives the order and a notification.</p>
+        <p className="text-muted-foreground text-sm">
+          Simulate an order to a shop and assign it to a specific customer. That name appears in Orders Management.
+        </p>
       </div>
 
-      {/* Shop filter */}
       <Card>
-        <CardContent className="p-4">
+        <CardContent className="p-4 space-y-4">
+          <div>
+            <Label htmlFor="customer">Customer for new orders *</Label>
+            <div className="mt-2 flex flex-col sm:flex-row gap-3">
+              <input
+                type="search"
+                placeholder="Search customers by name or email..."
+                value={customerSearch}
+                onChange={(e) => setCustomerSearch(e.target.value)}
+                className="flex-1 px-4 py-2 bg-input border border-border rounded-lg text-sm"
+              />
+              <select
+                id="customer"
+                value={customerUserId}
+                onChange={(e) => setCustomerUserId(e.target.value)}
+                className="flex-1 min-w-[220px] px-4 py-2 bg-input border border-border rounded-lg text-sm"
+              >
+                <option value="">Select customer...</option>
+                {filteredCustomers.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({c.email})
+                  </option>
+                ))}
+              </select>
+            </div>
+            {selectedCustomer ? (
+              <p className="text-xs text-muted-foreground mt-2">
+                Next order will show as:{' '}
+                <span className="font-medium text-foreground">
+                  {selectedCustomer.name} · {selectedCustomer.email}
+                </span>
+              </p>
+            ) : (
+              <p className="text-xs text-destructive mt-2">
+                Choose a customer first — otherwise orders stay assigned to Admin.
+              </p>
+            )}
+          </div>
+
           <form method="get" action="/admin/trigger-orders" className="flex flex-wrap gap-4">
             <select
               name="shop"
@@ -94,7 +165,7 @@ export function TriggerOrdersClient({
             </select>
             <Button type="submit" variant="secondary">
               <Icon icon="solar:filter-bold" className="mr-2 size-4" />
-              Filter
+              Filter by shop
             </Button>
           </form>
         </CardContent>
@@ -131,7 +202,7 @@ export function TriggerOrdersClient({
                   size="sm"
                   className="w-full"
                   onClick={() => handleTrigger(product)}
-                  disabled={triggeringId === product.id}
+                  disabled={triggeringId === product.id || !customerUserId}
                 >
                   {triggeringId === product.id ? 'Triggering...' : 'Trigger order'}
                 </Button>

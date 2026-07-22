@@ -34,13 +34,21 @@ async function getTriggerOrdersData(searchParams: SearchParams) {
 
   productsQuery = productsQuery.order('createdAt', { ascending: false }).range(skip, skip + limit - 1)
 
-  const [productsResult, shopsResult] = await Promise.all([
+  const [productsResult, shopsResult, customersResult] = await Promise.all([
     productsQuery,
     supabaseAdmin
       .from('shops')
       .select('id, name')
       .eq('status', 'ACTIVE')
       .order('name', { ascending: true }),
+    supabaseAdmin
+      .from('users')
+      .select('id, name, email, role')
+      .neq('role', 'ADMIN')
+      .neq('role', 'MANAGER')
+      .eq('status', 'ACTIVE')
+      .order('name', { ascending: true })
+      .limit(500),
   ])
 
   if (productsResult.error) throw productsResult.error
@@ -61,6 +69,11 @@ async function getTriggerOrdersData(searchParams: SearchParams) {
     }
   })
   const shops = (shopsResult.data || []).map((s: any) => ({ id: s.id, name: s.name }))
+  const customers = (customersResult.data || []).map((u: any) => ({
+    id: u.id as string,
+    name: (u.name as string) || 'Customer',
+    email: (u.email as string) || '',
+  }))
 
   return {
     products,
@@ -68,6 +81,7 @@ async function getTriggerOrdersData(searchParams: SearchParams) {
     pages: Math.ceil(total / limit),
     page,
     shops,
+    customers,
   }
 }
 
