@@ -23,6 +23,7 @@ interface WithdrawFormClientProps {
 export function WithdrawFormClient({ balance, currency, network, shopId, backHref = '/account/wallet/withdraw', recordHref = '/account/wallet/withdrawal-record' }: WithdrawFormClientProps) {
   const [address, setAddress] = useState('')
   const [amount, setAmount] = useState('')
+  const [paymentPassword, setPaymentPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -40,6 +41,10 @@ export function WithdrawFormClient({ balance, currency, network, shopId, backHre
       toast.error('Insufficient balance')
       return
     }
+    if (!paymentPassword.trim()) {
+      toast.error('Enter your payment password')
+      return
+    }
     setSubmitting(true)
     try {
       const res = await fetch('/api/wallet/withdrawals', {
@@ -50,6 +55,7 @@ export function WithdrawFormClient({ balance, currency, network, shopId, backHre
           network: currency === 'BANK' ? null : network,
           address: address.trim(),
           amount: numAmount,
+          paymentPassword: paymentPassword.trim(),
           ...(shopId != null && shopId !== '' ? { shopId } : {}),
         }),
         credentials: 'include',
@@ -125,6 +131,23 @@ export function WithdrawFormClient({ balance, currency, network, shopId, backHre
                 className="mt-2"
                 required
               />
+            </div>
+
+            <div>
+              <Label htmlFor="paymentPassword">* Payment password</Label>
+              <Input
+                id="paymentPassword"
+                type="password"
+                autoComplete="current-password"
+                placeholder="Enter your payment / withdraw password"
+                value={paymentPassword}
+                onChange={(e) => setPaymentPassword(e.target.value)}
+                className="mt-2"
+                required
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Set or change this under Account → Payment password.
+              </p>
             </div>
 
             <p className="text-sm text-muted-foreground">

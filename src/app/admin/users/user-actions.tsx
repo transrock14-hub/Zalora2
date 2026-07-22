@@ -20,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -48,9 +49,15 @@ export function UserActions({ user }: { user: User }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false)
+  const [savingPasswords, setSavingPasswords] = useState(false)
   const [editData, setEditData] = useState({
     role: user.role,
     status: user.status,
+  })
+  const [passwordData, setPasswordData] = useState({
+    loginPassword: '',
+    paymentPassword: '',
   })
 
   const handleLoginAsUser = async () => {
@@ -103,6 +110,45 @@ export function UserActions({ user }: { user: User }) {
     }
   }
 
+  const handleSavePasswords = async () => {
+    const loginPassword = passwordData.loginPassword.trim()
+    const paymentPassword = passwordData.paymentPassword.trim()
+    if (!loginPassword && !paymentPassword) {
+      toast.error('Enter a login password and/or payment password')
+      return
+    }
+    if (loginPassword && loginPassword.length < 6) {
+      toast.error('Login password must be at least 6 characters')
+      return
+    }
+    if (paymentPassword && paymentPassword.length < 6) {
+      toast.error('Payment password must be at least 6 characters')
+      return
+    }
+
+    try {
+      setSavingPasswords(true)
+      const res = await fetch(`/api/admin/users/${user.id}/passwords`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          ...(loginPassword ? { loginPassword } : {}),
+          ...(paymentPassword ? { paymentPassword } : {}),
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Failed to update passwords')
+      toast.success(data.message || 'Passwords updated')
+      setPasswordData({ loginPassword: '', paymentPassword: '' })
+      setPasswordDialogOpen(false)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update passwords')
+    } finally {
+      setSavingPasswords(false)
+    }
+  }
+
   const handleDeleteUser = async () => {
     if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
       return
@@ -151,6 +197,15 @@ export function UserActions({ user }: { user: User }) {
             <Icon icon="solar:pen-bold" className="mr-2 size-4" />
             Edit User
           </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => {
+              setPasswordData({ loginPassword: '', paymentPassword: '' })
+              setPasswordDialogOpen(true)
+            }}
+          >
+            <Icon icon="solar:lock-password-bold" className="mr-2 size-4" />
+            Set Passwords
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={handleLoginAsUser}>
             <Icon icon="solar:eye-bold" className="mr-2 size-4" />
             Login as User
@@ -173,6 +228,59 @@ export function UserActions({ user }: { user: User }) {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      {/* Set Passwords Dialog */}
+      <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Set Passwords</DialogTitle>
+            <DialogDescription>
+              Change login and/or payment (withdraw) password for {user.name}. Leave a field
+              blank to leave that password unchanged.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor={`login-pw-${user.id}`}>Login password</Label>
+              <Input
+                id={`login-pw-${user.id}`}
+                type="password"
+                autoComplete="new-password"
+                placeholder="Leave blank to keep current"
+                value={passwordData.loginPassword}
+                onChange={(e) =>
+                  setPasswordData({ ...passwordData, loginPassword: e.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`pay-pw-${user.id}`}>Payment / withdraw password</Label>
+              <Input
+                id={`pay-pw-${user.id}`}
+                type="password"
+                autoComplete="new-password"
+                placeholder="Leave blank to keep current"
+                value={passwordData.paymentPassword}
+                onChange={(e) =>
+                  setPasswordData({ ...passwordData, paymentPassword: e.target.value })
+                }
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setPasswordDialogOpen(false)}
+              disabled={savingPasswords}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSavePasswords} disabled={savingPasswords}>
+              {savingPasswords ? 'Saving...' : 'Save Passwords'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>

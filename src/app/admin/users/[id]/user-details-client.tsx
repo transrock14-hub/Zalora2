@@ -88,7 +88,9 @@ export function UserDetailsClient({
   recentOrders,
 }: UserDetailsClientProps) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [isSavingPasswords, setIsSavingPasswords] = useState(false)
   const [savingControls, setSavingControls] = useState(false)
   const [prefs, setPrefs] = useState({
     orderUpdates: initialUser.preferences?.orderUpdates !== false,
@@ -102,6 +104,10 @@ export function UserDetailsClient({
     role: initialUser.role,
     status: initialUser.status,
     balance: initialUser.balance.toString(),
+  })
+  const [passwordData, setPasswordData] = useState({
+    loginPassword: '',
+    paymentPassword: '',
   })
 
   const handleSaveControls = async () => {
@@ -162,6 +168,45 @@ export function UserDetailsClient({
     }
   }
 
+  const handleSavePasswords = async () => {
+    const loginPassword = passwordData.loginPassword.trim()
+    const paymentPassword = passwordData.paymentPassword.trim()
+    if (!loginPassword && !paymentPassword) {
+      toast.error('Enter a login password and/or payment password')
+      return
+    }
+    if (loginPassword && loginPassword.length < 6) {
+      toast.error('Login password must be at least 6 characters')
+      return
+    }
+    if (paymentPassword && paymentPassword.length < 6) {
+      toast.error('Payment password must be at least 6 characters')
+      return
+    }
+
+    setIsSavingPasswords(true)
+    try {
+      const res = await fetch(`/api/admin/users/${initialUser.id}/passwords`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          ...(loginPassword ? { loginPassword } : {}),
+          ...(paymentPassword ? { paymentPassword } : {}),
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Failed to update passwords')
+      toast.success(data.message || 'Passwords updated')
+      setPasswordData({ loginPassword: '', paymentPassword: '' })
+      setIsPasswordDialogOpen(false)
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update passwords')
+    } finally {
+      setIsSavingPasswords(false)
+    }
+  }
+
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
       <div className="flex items-center justify-between">
@@ -169,7 +214,17 @@ export function UserDetailsClient({
           <h1 className="text-2xl font-bold font-heading">User Details</h1>
           <p className="text-muted-foreground">{initialUser.name}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 justify-end">
+          <Button
+            variant="outline"
+            onClick={() => {
+              setPasswordData({ loginPassword: '', paymentPassword: '' })
+              setIsPasswordDialogOpen(true)
+            }}
+          >
+            <Icon icon="solar:lock-password-bold" className="mr-2 size-4" />
+            Set Passwords
+          </Button>
           <Button
             variant="outline"
             onClick={() => {
@@ -461,6 +516,59 @@ export function UserDetailsClient({
           </Card>
         </div>
       </div>
+
+      {/* Set Passwords Dialog */}
+      <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Set Passwords</DialogTitle>
+            <DialogDescription>
+              Change login and/or payment (withdraw) password for {initialUser.name}. Leave a
+              field blank to leave that password unchanged.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="admin-login-password">Login password</Label>
+              <Input
+                id="admin-login-password"
+                type="password"
+                autoComplete="new-password"
+                placeholder="Leave blank to keep current"
+                value={passwordData.loginPassword}
+                onChange={(e) =>
+                  setPasswordData({ ...passwordData, loginPassword: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="admin-payment-password">Payment / withdraw password</Label>
+              <Input
+                id="admin-payment-password"
+                type="password"
+                autoComplete="new-password"
+                placeholder="Leave blank to keep current"
+                value={passwordData.paymentPassword}
+                onChange={(e) =>
+                  setPasswordData({ ...passwordData, paymentPassword: e.target.value })
+                }
+              />
+            </div>
+            <div className="flex gap-2 justify-end pt-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsPasswordDialogOpen(false)}
+                disabled={isSavingPasswords}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleSavePasswords} disabled={isSavingPasswords}>
+                {isSavingPasswords ? 'Saving...' : 'Save Passwords'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit User Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>

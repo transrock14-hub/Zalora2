@@ -53,7 +53,7 @@ export function AccountClient({ user, stats }: AccountClientProps) {
     { icon: 'solar:headset-bold', labelKey: 'serviceCenter', href: '/account/support', color: 'text-destructive', show: true, requiresShop: false },
     { icon: 'solar:wallet-bold', labelKey: 'walletManagement', href: '/account/wallet', color: 'text-chart-4', show: true, requiresShop: false },
     { icon: 'solar:lock-password-bold', labelKey: 'loginPassword', href: '/account/password', color: 'text-cyan-500', show: true, requiresShop: false },
-    { icon: 'solar:shield-keyhole-bold', labelKey: 'paymentPassword', href: '/account/password', color: 'text-chart-3', show: true, requiresShop: false },
+    { icon: 'solar:shield-keyhole-bold', labelKey: 'paymentPassword', href: '/account/payment-password', color: 'text-chart-3', show: true, requiresShop: false },
     { icon: 'solar:file-download-bold', labelKey: 'downloadTheApp', href: '#', color: 'text-chart-4', show: true, requiresShop: false },
     { icon: 'solar:settings-bold', labelKey: 'setUp', href: '/account/settings', color: 'text-cyan-500', show: true, requiresShop: false },
   ]

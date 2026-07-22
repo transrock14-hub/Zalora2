@@ -50,13 +50,57 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { currency, network, address, amount, shopId } = body
+    const { currency, network, address, amount, shopId, paymentPassword } = body
 
     if (!currency || !address || amount == null || Number(amount) <= 0) {
       return NextResponse.json(
         { error: 'Currency, address and a positive amount are required' },
         { status: 400 }
       )
+    }
+
+    const payPass = typeof paymentPassword === 'string' ? paymentPassword : ''
+    if (!payPass) {
+      return NextResponse.json(
+        { error: 'Payment password is required to withdraw' },
+        { status: 400 }
+      )
+    }
+
+    const { data: authUser, error: authUserErr } = await supabaseAdmin
+      .from('users')
+      .select('id, balance, paymentPassword')
+      .eq('id', session.userId)
+      .maybeSingle()
+
+    if (authUserErr) {
+      if (
+        (authUserErr as { code?: string }).code === 'PGRST204' ||
+        authUserErr.message?.includes('paymentPassword')
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              'Payment password is not configured on the server yet. Ask admin to run the migration.',
+          },
+          { status: 503 }
+        )
+      }
+      return NextResponse.json({ error: 'Failed to verify payment password' }, { status: 500 })
+    }
+
+    const storedPay = (authUser as { paymentPassword?: string | null } | null)?.paymentPassword
+    if (!storedPay) {
+      return NextResponse.json(
+        { error: 'Set a payment password in Account → Payment password before withdrawing' },
+        { status: 400 }
+      )
+    }
+
+    const { verifyPassword } = await import('@/lib/auth')
+    const payOk = await verifyPassword(payPass, storedPay)
+    if (!payOk) {
+      return NextResponse.json({ error: 'Payment password is incorrect' }, { status: 400 })
     }
 
     let insertShopId: string | null = null
@@ -67,8 +111,7 @@ export async function POST(req: NextRequest) {
       insertShopId = shopId
       balance = Number(shop?.balance ?? 0)
     } else {
-      const { data: user } = await supabaseAdmin.from('users').select('balance').eq('id', session.userId).single()
-      balance = Number(user?.balance ?? 0)
+      balance = Number(authUser?.balance ?? 0)
     }
 
     const withdrawAmount = Number(amount)
