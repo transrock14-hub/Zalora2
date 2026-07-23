@@ -500,7 +500,7 @@ export async function POST(request: NextRequest) {
                   stock: orig.stock,
                   lowStockAlert: orig.lowStockAlert,
                   weight: orig.weight,
-                  status: 'ACTIVE',
+                  status: 'PUBLISHED',
                   isFeatured: false,
                   isPromoted: false,
                 })

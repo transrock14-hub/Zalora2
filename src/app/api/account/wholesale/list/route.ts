@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
         costPrice: wholesalePrice,
         stock: (catalogProduct as any).stock ?? 0,
         sku: (catalogProduct as any).sku ?? null,
-        status: 'DRAFT',
+        status: 'PUBLISHED',
         isFeatured: false,
       })
       .select('id')
