@@ -3,7 +3,8 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { getSession } from '@/lib/auth'
 
 /**
- * DELETE: Admin removes a single message from a support chat.
+ * DELETE: Hide a message from the admin view only.
+ * The customer still sees the message on their side.
  */
 export async function DELETE(
   _req: NextRequest,
@@ -21,35 +22,62 @@ export async function DELETE(
       return NextResponse.json({ error: 'Ticket and message id are required' }, { status: 400 })
     }
 
-    // Ignore optimistic temp ids from the client
     if (messageId.startsWith('temp-')) {
       return NextResponse.json({ error: 'Message is still sending' }, { status: 400 })
     }
 
     const { data: message, error: findError } = await supabaseAdmin
       .from('ticket_messages')
-      .select('id, ticketId')
+      .select('id, ticketId, hiddenFromAdmin')
       .eq('id', messageId)
       .eq('ticketId', ticketId)
       .maybeSingle()
 
     if (findError) {
-      console.error('Error finding message to delete:', findError)
-      return NextResponse.json({ error: 'Failed to delete message' }, { status: 500 })
+      if (
+        (findError as { code?: string }).code === 'PGRST204' ||
+        findError.message?.includes('hiddenFromAdmin')
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              'hiddenFromAdmin column is missing. Run supabase-support-message-admin-hide-migration.sql in Supabase SQL Editor.',
+          },
+          { status: 503 }
+        )
+      }
+      console.error('Error finding message to hide:', findError)
+      return NextResponse.json({ error: 'Failed to hide message' }, { status: 500 })
     }
     if (!message) {
       return NextResponse.json({ error: 'Message not found' }, { status: 404 })
     }
 
-    const { error: deleteError } = await supabaseAdmin
+    if ((message as { hiddenFromAdmin?: boolean }).hiddenFromAdmin) {
+      return NextResponse.json({ success: true, hiddenFromAdmin: true })
+    }
+
+    const { error: updateError } = await supabaseAdmin
       .from('ticket_messages')
-      .delete()
+      .update({ hiddenFromAdmin: true })
       .eq('id', messageId)
       .eq('ticketId', ticketId)
 
-    if (deleteError) {
-      console.error('Error deleting message:', deleteError)
-      return NextResponse.json({ error: 'Failed to delete message' }, { status: 500 })
+    if (updateError) {
+      if (
+        (updateError as { code?: string }).code === 'PGRST204' ||
+        updateError.message?.includes('hiddenFromAdmin')
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              'hiddenFromAdmin column is missing. Run supabase-support-message-admin-hide-migration.sql in Supabase SQL Editor.',
+          },
+          { status: 503 }
+        )
+      }
+      console.error('Error hiding message from admin:', updateError)
+      return NextResponse.json({ error: 'Failed to hide message' }, { status: 500 })
     }
 
     await supabaseAdmin
@@ -57,9 +85,13 @@ export async function DELETE(
       .update({ updatedAt: new Date().toISOString() })
       .eq('id', ticketId)
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({
+      success: true,
+      hiddenFromAdmin: true,
+      message: 'Message hidden from admin view; customer can still see it',
+    })
   } catch (error) {
     console.error('DELETE /api/admin/support/[id]/messages/[messageId]', error)
-    return NextResponse.json({ error: 'Failed to delete message' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to hide message' }, { status: 500 })
   }
 }

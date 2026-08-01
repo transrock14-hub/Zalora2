@@ -249,7 +249,13 @@ export function TicketDetailClient({ ticket: initialTicket }: TicketDetailClient
       toast.error('Wait for the message to finish sending')
       return
     }
-    if (!confirm('Delete this message? This cannot be undone.')) return
+    if (
+      !confirm(
+        'Remove this message from the admin view only? The customer will still see it in their chat.'
+      )
+    ) {
+      return
+    }
 
     setDeletingMessageId(messageId)
     try {
@@ -258,15 +264,15 @@ export function TicketDetailClient({ ticket: initialTicket }: TicketDetailClient
         credentials: 'include',
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error || 'Failed to delete message')
+      if (!res.ok) throw new Error(data.error || 'Failed to hide message')
 
       setTicket((prev) => ({
         ...prev,
         messages: prev.messages.filter((m) => m.id !== messageId),
       }))
-      toast.success('Message deleted')
+      toast.success('Hidden from admin view — customer can still see it')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete message')
+      toast.error(error instanceof Error ? error.message : 'Failed to hide message')
     } finally {
       setDeletingMessageId(null)
     }
@@ -456,12 +462,12 @@ export function TicketDetailClient({ ticket: initialTicket }: TicketDetailClient
                             variant="ghost"
                             size="icon"
                             className="size-7 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                            title="Delete message"
+                            title="Hide from admin view (customer still sees it)"
                             disabled={Boolean(deletingMessageId) || message.id.startsWith('temp-')}
                             onClick={() => handleDeleteMessage(message.id)}
                           >
                             <Icon
-                              icon={isMsgDeleting ? 'solar:loading-circle-bold' : 'solar:trash-bin-trash-bold'}
+                              icon={isMsgDeleting ? 'solar:loading-circle-bold' : 'solar:eye-closed-bold'}
                               className={`size-3.5 ${isMsgDeleting ? 'animate-spin' : ''}`}
                             />
                           </Button>

@@ -149,9 +149,17 @@ export async function GET(req: NextRequest) {
     const getCreatedAt = (obj: Record<string, unknown>) =>
       String(obj?.createdAt ?? obj?.createdat ?? obj?.created_at ?? '')
 
+    const isAdmin = role === 'ADMIN' || role === 'MANAGER'
     const formattedTickets = tickets.map((ticket) => {
       const rawMessages = (ticket.messages as Record<string, unknown>[]) || []
       const messages = rawMessages
+        .filter((m) => {
+          if (!isAdmin) return true
+          const hidden = Boolean(
+            m.hiddenFromAdmin ?? m.hidden_from_admin ?? m.hiddenfromadmin ?? false
+          )
+          return !hidden
+        })
         .map((m) => ({ ...m, createdAt: getCreatedAt(m) }))
         .sort((a, b) => new Date(getCreatedAt(b)).getTime() - new Date(getCreatedAt(a)).getTime())
       return {

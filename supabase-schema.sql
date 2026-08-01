@@ -399,6 +399,7 @@ CREATE TABLE IF NOT EXISTS ticket_messages (
     message TEXT NOT NULL,
     "isFromAdmin" BOOLEAN NOT NULL DEFAULT false,
     "isAI" BOOLEAN NOT NULL DEFAULT false,
+    "hiddenFromAdmin" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "ticket_messages_ticketId_fkey" FOREIGN KEY ("ticketId") REFERENCES support_tickets(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
