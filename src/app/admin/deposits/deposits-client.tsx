@@ -94,6 +94,31 @@ export function DepositsClient() {
     }
   }
 
+  const handleHideFromAdmin = async (id: string) => {
+    if (
+      !confirm(
+        'Remove this approved deposit from the admin list only? The user will still see it in their recharge records.'
+      )
+    ) {
+      return
+    }
+    setUpdating(id)
+    try {
+      const res = await fetch(`/api/admin/deposits/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Failed')
+      toast.success('Hidden from admin — user can still see it')
+      fetchDeposits()
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed')
+    } finally {
+      setUpdating(null)
+    }
+  }
+
   const statusColor = (status: string) => {
     if (status === 'APPROVED') return 'bg-emerald-100 text-emerald-800'
     if (status === 'REJECTED') return 'bg-red-100 text-red-800'
@@ -179,6 +204,19 @@ export function DepositsClient() {
                           Reject
                         </Button>
                       </>
+                    )}
+                    {d.status === 'APPROVED' && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-destructive border-destructive/40 hover:bg-destructive/10"
+                        onClick={() => handleHideFromAdmin(d.id)}
+                        disabled={updating === d.id}
+                        title="Hide from admin view (user still sees it)"
+                      >
+                        <Icon icon="solar:eye-closed-bold" className="size-4 mr-1.5" />
+                        {updating === d.id ? '...' : 'Remove from admin'}
+                      </Button>
                     )}
                   </div>
                 </div>

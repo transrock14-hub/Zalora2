@@ -18,13 +18,32 @@ export async function GET(req: NextRequest) {
         *,
         user:users!deposit_requests_userId_fkey (id, name, email)
       `)
+      .eq('hiddenFromAdmin', false)
       .order('createdAt', { ascending: false })
 
     if (status) {
       query = query.eq('status', status)
     }
 
-    const { data: rows, error } = await query
+    let { data: rows, error } = await query
+
+    // Fallback if migration not applied yet
+    if (
+      error &&
+      (error.message?.includes('hiddenFromAdmin') || (error as { code?: string }).code === 'PGRST204')
+    ) {
+      let fallback = supabaseAdmin
+        .from('deposit_requests')
+        .select(`
+          *,
+          user:users!deposit_requests_userId_fkey (id, name, email)
+        `)
+        .order('createdAt', { ascending: false })
+      if (status) fallback = fallback.eq('status', status)
+      const retry = await fallback
+      rows = retry.data
+      error = retry.error
+    }
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })

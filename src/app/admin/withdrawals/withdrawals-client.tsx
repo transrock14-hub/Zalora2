@@ -93,6 +93,31 @@ export function WithdrawalsClient() {
     }
   }
 
+  const handleHideFromAdmin = async (id: string) => {
+    if (
+      !confirm(
+        'Remove this approved withdrawal from the admin list only? The user will still see it in their withdrawal records.'
+      )
+    ) {
+      return
+    }
+    setUpdating(id)
+    try {
+      const res = await fetch(`/api/admin/withdrawals/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Failed')
+      toast.success('Hidden from admin — user can still see it')
+      fetchWithdrawals()
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed')
+    } finally {
+      setUpdating(null)
+    }
+  }
+
   const statusColor = (status: string) => {
     if (status === 'APPROVED') return 'bg-emerald-100 text-emerald-800'
     if (status === 'REJECTED') return 'bg-red-100 text-red-800'
@@ -171,6 +196,19 @@ export function WithdrawalsClient() {
                           Reject
                         </Button>
                       </>
+                    )}
+                    {w.status === 'APPROVED' && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-destructive border-destructive/40 hover:bg-destructive/10"
+                        onClick={() => handleHideFromAdmin(w.id)}
+                        disabled={updating === w.id}
+                        title="Hide from admin view (user still sees it)"
+                      >
+                        <Icon icon="solar:eye-closed-bold" className="size-4 mr-1.5" />
+                        {updating === w.id ? '...' : 'Remove from admin'}
+                      </Button>
                     )}
                   </div>
                 </div>

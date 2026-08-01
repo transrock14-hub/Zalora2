@@ -91,3 +91,84 @@ export async function PATCH(
     return NextResponse.json({ error: 'Failed to update deposit' }, { status: 500 })
   }
 }
+
+/**
+ * DELETE: Hide an APPROVED deposit from admin view only.
+ * User recharge records and balances are unchanged.
+ */
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getSession()
+    if (!session || (session.role !== 'ADMIN' && session.role !== 'MANAGER')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const { id } = await params
+    const { data: deposit, error: fetchErr } = await supabaseAdmin
+      .from('deposit_requests')
+      .select('id, status, hiddenFromAdmin')
+      .eq('id', id)
+      .maybeSingle()
+
+    if (fetchErr) {
+      if (
+        (fetchErr as { code?: string }).code === 'PGRST204' ||
+        fetchErr.message?.includes('hiddenFromAdmin')
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              'hiddenFromAdmin column is missing. Run supabase-wallet-admin-hide-migration.sql in Supabase SQL Editor.',
+          },
+          { status: 503 }
+        )
+      }
+      return NextResponse.json({ error: 'Failed to hide deposit' }, { status: 500 })
+    }
+    if (!deposit) {
+      return NextResponse.json({ error: 'Deposit not found' }, { status: 404 })
+    }
+    if (deposit.status !== 'APPROVED') {
+      return NextResponse.json(
+        { error: 'Only approved deposits can be removed from the admin list' },
+        { status: 400 }
+      )
+    }
+    if (deposit.hiddenFromAdmin) {
+      return NextResponse.json({ success: true, hiddenFromAdmin: true })
+    }
+
+    const { error: updateErr } = await supabaseAdmin
+      .from('deposit_requests')
+      .update({ hiddenFromAdmin: true, updatedAt: new Date().toISOString() })
+      .eq('id', id)
+
+    if (updateErr) {
+      if (
+        (updateErr as { code?: string }).code === 'PGRST204' ||
+        updateErr.message?.includes('hiddenFromAdmin')
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              'hiddenFromAdmin column is missing. Run supabase-wallet-admin-hide-migration.sql in Supabase SQL Editor.',
+          },
+          { status: 503 }
+        )
+      }
+      return NextResponse.json({ error: updateErr.message || 'Failed to hide deposit' }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      success: true,
+      hiddenFromAdmin: true,
+      message: 'Deposit hidden from admin view; user can still see it',
+    })
+  } catch (e) {
+    console.error('DELETE /api/admin/deposits/[id]', e)
+    return NextResponse.json({ error: 'Failed to hide deposit' }, { status: 500 })
+  }
+}
