@@ -92,6 +92,7 @@ export function SupportTicketsClient() {
   const [replyMessage, setReplyMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const supabaseRef = useRef<ReturnType<typeof createSupabaseBrowserClient> | null>(null)
   const channelTicketsRef = useRef<ReturnType<ReturnType<typeof createSupabaseBrowserClient>['channel']> | null>(null)
   const channelMessagesRef = useRef<ReturnType<ReturnType<typeof createSupabaseBrowserClient>['channel']> | null>(null)
@@ -130,6 +131,22 @@ export function SupportTicketsClient() {
             'postgres_changes',
             { event: 'INSERT', schema: 'public', table: 'support_tickets' },
             () => fetchTickets()
+          )
+          .on(
+            'postgres_changes',
+            { event: 'DELETE', schema: 'public', table: 'support_tickets' },
+            (payload) => {
+              const deletedId = (payload.old as { id?: string } | null)?.id
+              if (!deletedId) {
+                fetchTickets()
+                return
+              }
+              setTickets((prev) => prev.filter((t) => t.id !== deletedId))
+              if (selectedTicketIdRef.current === deletedId) {
+                setSelectedTicket(null)
+                setReplyMessage('')
+              }
+            }
           )
           .subscribe()
         channelMessagesRef.current = supabase
@@ -297,6 +314,38 @@ export function SupportTicketsClient() {
     } catch {
       toast.error('Failed to update priority')
       setIsUpdating(false)
+    }
+  }
+
+  const handleDeleteChat = async () => {
+    if (!selectedTicket || isDeleting) return
+    const label = selectedTicket.ticketNumber || selectedTicket.subject
+    if (
+      !confirm(
+        `Delete this chat (#${label})? This permanently removes the conversation and all messages.`
+      )
+    ) {
+      return
+    }
+
+    setIsDeleting(true)
+    const deletedId = selectedTicket.id
+    try {
+      const res = await fetch(`/api/admin/support/${deletedId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Failed to delete chat')
+
+      setTickets((prev) => prev.filter((t) => t.id !== deletedId))
+      setSelectedTicket(null)
+      setReplyMessage('')
+      toast.success('Chat deleted')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to delete chat')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -563,6 +612,19 @@ export function SupportTicketsClient() {
                 <Badge variant="outline" className={getPriorityColor(selectedTicket.priority)}>
                   {selectedTicket.priority}
                 </Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive border-destructive/40 hover:bg-destructive/10"
+                  onClick={handleDeleteChat}
+                  disabled={isDeleting}
+                >
+                  <Icon
+                    icon={isDeleting ? 'solar:loading-circle-bold' : 'solar:trash-bin-trash-bold'}
+                    className={cn('size-4 mr-1.5', isDeleting && 'animate-spin')}
+                  />
+                  {isDeleting ? 'Deleting…' : 'Delete'}
+                </Button>
               </div>
 
               {/* Messages */}
@@ -678,6 +740,18 @@ export function SupportTicketsClient() {
                       </SelectContent>
                     </Select>
                   </div>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleDeleteChat}
+                    disabled={isDeleting}
+                  >
+                    <Icon
+                      icon={isDeleting ? 'solar:loading-circle-bold' : 'solar:trash-bin-trash-bold'}
+                      className={cn('size-4 mr-1.5', isDeleting && 'animate-spin')}
+                    />
+                    Delete chat
+                  </Button>
                 </div>
               </div>
             </>

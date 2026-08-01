@@ -40,3 +40,46 @@ export async function PATCH(
     )
   }
 }
+
+/** Hard-delete a support chat (ticket). Messages cascade via FK. */
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getSession()
+
+    if (!session || (session.role !== 'ADMIN' && session.role !== 'MANAGER')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { data: existing, error: findError } = await supabaseAdmin
+      .from('support_tickets')
+      .select('id')
+      .eq('id', params.id)
+      .maybeSingle()
+
+    if (findError) {
+      console.error('Error finding ticket to delete:', findError)
+      return NextResponse.json({ error: 'Failed to delete chat' }, { status: 500 })
+    }
+    if (!existing) {
+      return NextResponse.json({ error: 'Chat not found' }, { status: 404 })
+    }
+
+    const { error } = await supabaseAdmin
+      .from('support_tickets')
+      .delete()
+      .eq('id', params.id)
+
+    if (error) {
+      console.error('Error deleting ticket:', error)
+      return NextResponse.json({ error: 'Failed to delete chat' }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting ticket:', error)
+    return NextResponse.json({ error: 'Failed to delete chat' }, { status: 500 })
+  }
+}

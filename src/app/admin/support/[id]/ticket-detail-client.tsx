@@ -48,6 +48,7 @@ export function TicketDetailClient({ ticket: initialTicket }: TicketDetailClient
   const [replyMessage, setReplyMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const supabaseRef = useRef<ReturnType<typeof createSupabaseBrowserClient> | null>(null)
   const channelRef = useRef<ReturnType<ReturnType<typeof createSupabaseBrowserClient>['channel']> | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -197,6 +198,33 @@ export function TicketDetailClient({ ticket: initialTicket }: TicketDetailClient
     }
   }
 
+  const handleDeleteChat = async () => {
+    if (isDeleting) return
+    if (
+      !confirm(
+        `Delete this chat (#${ticket.ticketNumber})? This permanently removes the conversation and all messages.`
+      )
+    ) {
+      return
+    }
+
+    setIsDeleting(true)
+    try {
+      const res = await fetch(`/api/admin/support/${ticket.id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Failed to delete chat')
+      toast.success('Chat deleted')
+      router.push('/admin/support')
+      router.refresh()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to delete chat')
+      setIsDeleting(false)
+    }
+  }
+
   const handleSendReply = async () => {
     const trimmedMessage = replyMessage.trim()
     
@@ -323,6 +351,17 @@ export function TicketDetailClient({ ticket: initialTicket }: TicketDetailClient
           <h1 className="text-2xl font-bold font-heading">{ticket.subject}</h1>
           <p className="text-muted-foreground">Ticket #{ticket.ticketNumber}</p>
         </div>
+        <Button
+          variant="destructive"
+          onClick={handleDeleteChat}
+          disabled={isDeleting}
+        >
+          <Icon
+            icon={isDeleting ? 'solar:loading-circle-bold' : 'solar:trash-bin-trash-bold'}
+            className={`size-4 mr-2 ${isDeleting ? 'animate-spin' : ''}`}
+          />
+          {isDeleting ? 'Deleting…' : 'Delete chat'}
+        </Button>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
