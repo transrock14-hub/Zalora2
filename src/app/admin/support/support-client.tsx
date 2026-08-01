@@ -93,6 +93,7 @@ export function SupportTicketsClient() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null)
   const supabaseRef = useRef<ReturnType<typeof createSupabaseBrowserClient> | null>(null)
   const channelTicketsRef = useRef<ReturnType<ReturnType<typeof createSupabaseBrowserClient>['channel']> | null>(null)
   const channelMessagesRef = useRef<ReturnType<ReturnType<typeof createSupabaseBrowserClient>['channel']> | null>(null)
@@ -198,6 +199,34 @@ export function SupportTicketsClient() {
                   }
                 })
                 setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
+              }
+            }
+          )
+          .on(
+            'postgres_changes',
+            { event: 'DELETE', schema: 'public', table: 'ticket_messages' },
+            (payload) => {
+              const deleted = payload.old as { id?: string; ticketId?: string } | null
+              const messageId = deleted?.id
+              const ticketId = deleted?.ticketId
+              if (!messageId) return
+              if (ticketId) {
+                setTickets((prev) =>
+                  prev.map((t) =>
+                    t.id === ticketId
+                      ? { ...t, messages: t.messages.filter((m) => (m as { id?: string }).id !== messageId) }
+                      : t
+                  )
+                )
+              } else {
+                fetchTickets()
+              }
+              if (!ticketId || selectedTicketIdRef.current === ticketId) {
+                setSelectedTicket((prev) =>
+                  prev
+                    ? { ...prev, messages: prev.messages.filter((m) => m.id !== messageId) }
+                    : prev
+                )
               }
             }
           )
@@ -346,6 +375,48 @@ export function SupportTicketsClient() {
       toast.error(error instanceof Error ? error.message : 'Failed to delete chat')
     } finally {
       setIsDeleting(false)
+    }
+  }
+
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!selectedTicket || deletingMessageId) return
+    if (messageId.startsWith('temp-')) {
+      toast.error('Wait for the message to finish sending')
+      return
+    }
+    if (!confirm('Delete this message? This cannot be undone.')) return
+
+    setDeletingMessageId(messageId)
+    const ticketId = selectedTicket.id
+    try {
+      const res = await fetch(`/api/admin/support/${ticketId}/messages/${messageId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Failed to delete message')
+
+      const remaining = selectedTicket.messages.filter((m) => m.id !== messageId)
+      setSelectedTicket((prev) => (prev ? { ...prev, messages: remaining } : prev))
+      const preview = [...remaining]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .map((m) => ({
+          message: m.message,
+          senderEmail: m.senderEmail,
+          createdAt: m.createdAt,
+        }))
+      setTickets((prev) =>
+        prev.map((t) =>
+          t.id === ticketId
+            ? { ...t, messages: preview, updatedAt: preview[0]?.createdAt ?? t.updatedAt }
+            : t
+        )
+      )
+      toast.success('Message deleted')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to delete message')
+    } finally {
+      setDeletingMessageId(null)
     }
   }
 
@@ -640,22 +711,40 @@ export function SupportTicketsClient() {
                   selectedTicket.messages.map((msg) => {
                     const fromAdmin = Boolean(msg.isFromAdmin)
                     const customerLabel = selectedTicket.user?.name || selectedTicket.user?.email || msg.senderEmail || 'Customer'
+                    const isMsgDeleting = deletingMessageId === msg.id
+                    const deleteBtn = (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 shrink-0 self-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        title="Delete message"
+                        disabled={Boolean(deletingMessageId) || msg.id.startsWith('temp-')}
+                        onClick={() => handleDeleteMessage(msg.id)}
+                      >
+                        <Icon
+                          icon={isMsgDeleting ? 'solar:loading-circle-bold' : 'solar:trash-bin-trash-bold'}
+                          className={cn('size-4', isMsgDeleting && 'animate-spin')}
+                        />
+                      </Button>
+                    )
                     return (
                       <div
                         key={msg.id}
                         className={cn(
-                          'flex gap-2',
+                          'flex gap-2 items-end',
                           fromAdmin ? 'justify-end' : 'justify-start'
                         )}
                       >
                         {!fromAdmin && (
-                          <div className="size-8 rounded-full bg-muted flex items-center justify-center shrink-0 self-end" title={customerLabel}>
+                          <div className="size-8 rounded-full bg-muted flex items-center justify-center shrink-0" title={customerLabel}>
                             <Icon icon="solar:user-bold" className="size-4 text-muted-foreground" />
                           </div>
                         )}
+                        {fromAdmin && deleteBtn}
                         <div
                           className={cn(
-                            'max-w-[85%] rounded-2xl px-4 py-2.5',
+                            'max-w-[75%] rounded-2xl px-4 py-2.5',
                             fromAdmin
                               ? 'rounded-br-md bg-primary text-primary-foreground'
                               : 'rounded-bl-md bg-muted text-foreground'
@@ -669,8 +758,9 @@ export function SupportTicketsClient() {
                           </p>
                           <p className="text-sm whitespace-pre-wrap break-words">{msg.message}</p>
                         </div>
+                        {!fromAdmin && deleteBtn}
                         {fromAdmin && (
-                          <div className="size-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0 self-end">
+                          <div className="size-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
                             <Icon icon="solar:user-id-bold" className="size-4 text-primary" />
                           </div>
                         )}

@@ -49,6 +49,7 @@ export function TicketDetailClient({ ticket: initialTicket }: TicketDetailClient
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null)
   const supabaseRef = useRef<ReturnType<typeof createSupabaseBrowserClient> | null>(null)
   const channelRef = useRef<ReturnType<ReturnType<typeof createSupabaseBrowserClient>['channel']> | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -102,6 +103,23 @@ export function TicketDetailClient({ ticket: initialTicket }: TicketDetailClient
               setTimeout(() => {
                 messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
               }, 150)
+            }
+          )
+          .on(
+            'postgres_changes',
+            {
+              event: 'DELETE',
+              schema: 'public',
+              table: 'ticket_messages',
+              filter: `ticketId=eq.${ticket.id}`,
+            },
+            (payload) => {
+              const deletedId = (payload.old as { id?: string } | null)?.id
+              if (!deletedId) return
+              setTicket((prev) => ({
+                ...prev,
+                messages: prev.messages.filter((m) => m.id !== deletedId),
+              }))
             }
           )
           .subscribe()
@@ -222,6 +240,35 @@ export function TicketDetailClient({ ticket: initialTicket }: TicketDetailClient
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to delete chat')
       setIsDeleting(false)
+    }
+  }
+
+  const handleDeleteMessage = async (messageId: string) => {
+    if (deletingMessageId) return
+    if (messageId.startsWith('temp-')) {
+      toast.error('Wait for the message to finish sending')
+      return
+    }
+    if (!confirm('Delete this message? This cannot be undone.')) return
+
+    setDeletingMessageId(messageId)
+    try {
+      const res = await fetch(`/api/admin/support/${ticket.id}/messages/${messageId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Failed to delete message')
+
+      setTicket((prev) => ({
+        ...prev,
+        messages: prev.messages.filter((m) => m.id !== messageId),
+      }))
+      toast.success('Message deleted')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to delete message')
+    } finally {
+      setDeletingMessageId(null)
     }
   }
 
@@ -381,6 +428,7 @@ export function TicketDetailClient({ ticket: initialTicket }: TicketDetailClient
                 ticket.messages.map((message) => {
                   const fromAdmin = Boolean(message.isFromAdmin)
                   const customerLabel = ticket.user?.name || ticket.user?.email || message.senderEmail || 'Customer'
+                  const isMsgDeleting = deletingMessageId === message.id
                   return (
                     <div
                       key={message.id}
@@ -392,8 +440,8 @@ export function TicketDetailClient({ ticket: initialTicket }: TicketDetailClient
                           className="size-5 text-primary"
                         />
                       </div>
-                      <div className={`flex-1 ${fromAdmin ? 'text-right' : ''}`}>
-                        <div className="flex items-center gap-2 mb-1">
+                      <div className={`flex-1 min-w-0 ${fromAdmin ? 'text-right' : ''}`}>
+                        <div className={`flex items-center gap-2 mb-1 ${fromAdmin ? 'justify-end' : ''}`}>
                           <span className="text-sm font-medium">
                             {fromAdmin ? 'You (Support)' : customerLabel}
                           </span>
@@ -403,6 +451,20 @@ export function TicketDetailClient({ ticket: initialTicket }: TicketDetailClient
                           <span className="text-xs text-muted-foreground">
                             {formatDateTime(new Date(message.createdAt))}
                           </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="size-7 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                            title="Delete message"
+                            disabled={Boolean(deletingMessageId) || message.id.startsWith('temp-')}
+                            onClick={() => handleDeleteMessage(message.id)}
+                          >
+                            <Icon
+                              icon={isMsgDeleting ? 'solar:loading-circle-bold' : 'solar:trash-bin-trash-bold'}
+                              className={`size-3.5 ${isMsgDeleting ? 'animate-spin' : ''}`}
+                            />
+                          </Button>
                         </div>
                         <div
                           className={`p-3 rounded-lg ${
@@ -411,7 +473,7 @@ export function TicketDetailClient({ ticket: initialTicket }: TicketDetailClient
                               : 'bg-muted'
                           }`}
                         >
-                          <p className="text-sm whitespace-pre-wrap">{message.message}</p>
+                          <p className="text-sm whitespace-pre-wrap text-left">{message.message}</p>
                         </div>
                       </div>
                     </div>
