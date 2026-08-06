@@ -135,10 +135,18 @@ export default async function SellerDashboardPage() {
 
   if (!currentUser) return null
 
-  const { shop, canAccessShop } = await getSellerShopAccess(currentUser.id)
+  const { shop, canAccessShop, isOrderSlaBlocked } = await getSellerShopAccess(currentUser.id)
 
   if (!shop) {
     redirect('/seller/create-shop')
+  }
+
+  if (isOrderSlaBlocked) {
+    redirect('/seller/blocked')
+  }
+
+  if (!canAccessShop) {
+    redirect('/seller/verification-status')
   }
 
   const stats = await getSellerStats(currentUser.id, shop?.id || null)

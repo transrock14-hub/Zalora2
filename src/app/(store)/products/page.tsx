@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 import { supabaseAdmin } from '@/lib/supabase'
+import { mapProductCard, PRODUCT_CARD_COLUMNS } from '@/lib/product-list'
 import { ProductsClient } from './products-client'
 
 export const dynamic = 'force-dynamic'
@@ -23,32 +24,33 @@ async function getProducts(searchParams: SearchParams) {
   const limit = 20
   const skip = (page - 1) * limit
 
-  // Build query
   let productsQuery = supabaseAdmin
     .from('products')
-    .select(`
-      *,
+    .select(
+      `
+      ${PRODUCT_CARD_COLUMNS},
       images:product_images!inner (
         url
       ),
       category:categories!products_categoryId_fkey (
         name
       )
-    `, { count: 'exact' })
+    `,
+      { count: 'exact' }
+    )
     .eq('status', 'PUBLISHED')
     .eq('images.isPrimary', true)
 
-  // Search filter
+  // Name/shortDesc only — full description ILIKE is slow at 4k+ products
   if (searchParams.search) {
-    productsQuery = productsQuery.or(`name.ilike.%${searchParams.search}%,description.ilike.%${searchParams.search}%`)
+    const q = searchParams.search.replace(/[%_,]/g, ' ')
+    productsQuery = productsQuery.or(`name.ilike.%${q}%,shortDesc.ilike.%${q}%`)
   }
 
-  // Category filter
   if (searchParams.category) {
     productsQuery = productsQuery.eq('categoryId', searchParams.category)
   }
 
-  // Price filter
   if (searchParams.minPrice) {
     productsQuery = productsQuery.gte('price', parseFloat(searchParams.minPrice))
   }
@@ -56,7 +58,6 @@ async function getProducts(searchParams: SearchParams) {
     productsQuery = productsQuery.lte('price', parseFloat(searchParams.maxPrice))
   }
 
-  // Sort options
   let orderByColumn = 'createdAt'
   let orderByAscending = false
 
@@ -74,7 +75,6 @@ async function getProducts(searchParams: SearchParams) {
     orderByAscending = false
   }
 
-  // Apply ordering and pagination
   productsQuery = productsQuery
     .order(orderByColumn, { ascending: orderByAscending })
     .range(skip, skip + limit - 1)
@@ -95,22 +95,19 @@ async function getProducts(searchParams: SearchParams) {
   const total = productsResult.count || 0
 
   return {
-    products: (productsResult.data || []).map((p: any) => ({
-      id: p.id,
-      name: p.name,
-      slug: p.slug,
-      price: Number(p.price),
-      comparePrice: p.comparePrice ? Number(p.comparePrice) : null,
-      rating: Number(p.rating || 0),
-      reviews: p.totalReviews || 0,
-      image: p.images && p.images.length > 0 ? p.images[0].url : '/placeholder-product.jpg',
-      categoryName: p.category?.name || 'Uncategorized',
-      isFeatured: p.isFeatured,
-    })),
+    products: (productsResult.data || []).map((p: any) =>
+      mapProductCard(p, p.images?.[0]?.url, {
+        categoryName: p.category?.name || 'Uncategorized',
+      })
+    ),
     total,
     pages: Math.ceil(total / limit),
     page,
-    categories: (categoriesResult.data || []).map((c: any) => ({ id: c.id, name: c.name, slug: c.slug })),
+    categories: (categoriesResult.data || []).map((c: any) => ({
+      id: c.id,
+      name: c.name,
+      slug: c.slug,
+    })),
   }
 }
 

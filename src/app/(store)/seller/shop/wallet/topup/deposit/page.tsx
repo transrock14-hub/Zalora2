@@ -12,8 +12,9 @@ export default async function SellerShopDepositPage({
 }) {
   const user = await getCurrentUser()
   if (!user) return null
-  const { shop } = await getSellerShopAccess(user.id)
+  const { shop, canAccessOrdersAndTopUp } = await getSellerShopAccess(user.id)
   if (!shop) redirect('/seller/create-shop')
+  if (!canAccessOrdersAndTopUp) redirect('/seller/verification-status')
 
   const { currency: currencyParam } = await searchParams
   const currency = (currencyParam || '').toUpperCase().trim()

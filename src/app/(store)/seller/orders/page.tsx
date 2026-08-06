@@ -16,6 +16,7 @@ const STATUS_TABS = [
 interface SearchParams {
   page?: string
   status?: string
+  blocked?: string
 }
 
 async function getSellerOrders(userId: string, searchParams: SearchParams) {
@@ -187,11 +188,18 @@ export default async function SellerOrdersPage({
     redirect('/account')
   }
 
-  const { shop, canAccessShop } = await getSellerShopAccess(currentUser.id)
+  const { shop, canAccessOrdersAndTopUp, isOrderSlaBlocked } =
+    await getSellerShopAccess(currentUser.id)
   if (!shop) redirect('/seller/create-shop')
-  if (!canAccessShop) redirect('/seller/verification-status')
+  if (!canAccessOrdersAndTopUp) redirect('/seller/verification-status')
 
   const data = await getSellerOrders(currentUser.id, searchParams)
 
-  return <SellerOrdersClient {...data} searchParams={searchParams} />
+  return (
+    <SellerOrdersClient
+      {...data}
+      searchParams={searchParams}
+      isOrderSlaBlocked={isOrderSlaBlocked}
+    />
+  )
 }

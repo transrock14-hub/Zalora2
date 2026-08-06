@@ -63,8 +63,13 @@ export function ProductSlider({ products, title, viewAllLink = '/products' }: Pr
   return (
     <div className="relative bg-white border border-gray-200/60 rounded-lg p-4 shadow-sm">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-lg text-gray-900">{title}</h3>
-        <Link href={viewAllLink} className="text-sm text-blue-600 hover:text-blue-700 hover:underline font-normal transition-colors">
+        <h3 className="font-bold text-base lg:text-lg uppercase tracking-[0.12em] text-neutral-900">
+          {title}
+        </h3>
+        <Link
+          href={viewAllLink}
+          className="text-xs uppercase tracking-[0.14em] font-medium text-neutral-900 underline underline-offset-4 decoration-neutral-300 hover:decoration-neutral-900 transition-colors"
+        >
           {t('viewAll')}
         </Link>
       </div>

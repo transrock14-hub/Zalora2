@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabase'
+import { fetchPrimaryImageMap, mapProductCard } from '@/lib/product-list'
 import { ShopDetailsClient } from './shop-details-client'
 
 export const dynamic = 'force-dynamic'
@@ -41,34 +42,11 @@ async function getShopBySlug(slug: string) {
   }
 
   const productIds = (productRows || []).map((p: any) => p.id)
-  let imageMap: Record<string, string> = {}
-  if (productIds.length > 0) {
-    const { data: images } = await supabaseAdmin
-      .from('product_images')
-      .select('productId, url, isPrimary')
-      .in('productId', productIds)
-      .order('isPrimary', { ascending: false })
-    const byProduct = (images || []).reduce(
-      (acc: Record<string, string>, img: any) => {
-        if (!acc[img.productId]) acc[img.productId] = img.url
-        return acc
-      },
-      {}
-    )
-    imageMap = byProduct
-  }
+  const imageMap = await fetchPrimaryImageMap(productIds)
 
-  const products = (productRows || []).map((p: any) => ({
-    id: p.id,
-    name: p.name,
-    slug: p.slug,
-    price: Number(p.price),
-    comparePrice: p.comparePrice ? Number(p.comparePrice) : null,
-    rating: Number(p.rating || 0),
-    reviews: Number(p.totalReviews || 0),
-    image: imageMap[p.id] || '/images/logo.png',
-    isFeatured: p.isFeatured,
-  }))
+  const products = (productRows || []).map((p: any) =>
+    mapProductCard(p, imageMap[p.id] || '/images/logo.png')
+  )
 
   return { shop, products }
 }

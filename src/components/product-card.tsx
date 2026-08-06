@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { formatPrice } from '@/lib/utils'
+import { optimizeProductImageUrl } from '@/lib/cdn-image'
 import { useCartStore } from '@/lib/store'
 import toast from 'react-hot-toast'
 
@@ -28,7 +29,9 @@ const PLACEHOLDER = '/images/logo.png'
 
 export function ProductCard({ product }: ProductCardProps) {
   const addItem = useCartStore((state) => state.addItem)
-  const [imgSrc, setImgSrc] = useState(product.image || PLACEHOLDER)
+  const [imgSrc, setImgSrc] = useState(
+    () => optimizeProductImageUrl(product.image || PLACEHOLDER, 400)
+  )
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()

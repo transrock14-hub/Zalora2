@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { getSession } from '@/lib/auth'
+import { assertSellerCanMutateShop } from '@/lib/seller-access'
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,26 +11,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get user with shop
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select(`
-        id,
-        shops (*)
-      `)
-      .eq('id', session.userId)
-      .single()
-
-    const rawShops = user?.shops
-    const shopRow = Array.isArray(rawShops) && rawShops.length > 0
-      ? rawShops[0]
-      : rawShops && typeof rawShops === 'object' && rawShops !== null && 'id' in rawShops
-        ? rawShops
-        : null
-    if (!shopRow) {
-      return NextResponse.json({ error: 'You must create a shop first' }, { status: 400 })
-    }
-    const shop = shopRow
+    const access = await assertSellerCanMutateShop(session.userId)
+    if (!access.ok) return access.response
+    const shop = access.shop
     const body = await req.json()
     const {
       name,

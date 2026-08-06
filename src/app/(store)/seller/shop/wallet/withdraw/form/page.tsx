@@ -20,8 +20,10 @@ export default async function SellerShopWithdrawFormPage({
 }) {
   const user = await getCurrentUser()
   if (!user) return null
-  const { shop } = await getSellerShopAccess(user.id)
+  const { shop, canAccessShop, isOrderSlaBlocked } = await getSellerShopAccess(user.id)
   if (!shop) redirect('/seller/create-shop')
+  if (isOrderSlaBlocked) redirect('/seller/blocked')
+  if (!canAccessShop) redirect('/seller/verification-status')
 
   const { method: methodId } = await searchParams
   const method = methodId ? METHOD_MAP[methodId.toLowerCase()] : null

@@ -49,6 +49,12 @@ export async function PATCH(
 
     if (status && Object.values(ShopStatus).includes(status)) {
       updateData.status = status
+      // Manual admin status changes clear SLA auto-block markers so cron/lazy
+      // unblock logic does not override an admin decision.
+      if (status === ShopStatus.ACTIVE || status === ShopStatus.SUSPENDED) {
+        updateData.autoBlockedAt = null
+        updateData.autoBlockReason = null
+      }
     }
 
     if (level && Object.values(ShopLevel).includes(level)) {

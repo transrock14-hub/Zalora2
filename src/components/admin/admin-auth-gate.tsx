@@ -1,22 +1,43 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import { useUserStore } from '@/lib/store'
-import { AuthSync } from '@/components/auth-sync'
 import { AdminSidebar } from '@/components/admin/sidebar'
 import { AdminHeader } from '@/components/admin/header'
 import { Button } from '@/components/ui/button'
 
-const AUTH_CHECK_TIMEOUT_MS = 12_000
+const AUTH_CHECK_TIMEOUT_MS = 10_000
+
+type GateUser = {
+  id: string
+  name: string
+  email: string
+  role: string
+  avatar?: string | null
+  isImpersonating?: boolean
+}
+
+function isAdminRole(role: string | undefined) {
+  return role === 'ADMIN' || role === 'MANAGER'
+}
 
 export function AdminAuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
+  const storedUser = useUserStore((state) => state.user)
   const setUserStore = useUserStore((state) => state.setUser)
-  const [user, setUser] = useState<{ id: string; name: string; email: string; role: string; avatar?: string | null; isImpersonating?: boolean } | null>(null)
-  const [status, setStatus] = useState<'checking' | 'allowed' | 'denied' | 'timeout' | 'error'>('checking')
+  const clearUserStore = useUserStore((state) => state.clearUser)
+
+  const cachedAdmin =
+    storedUser && isAdminRole(storedUser.role) ? (storedUser as GateUser) : null
+
+  const [user, setUser] = useState<GateUser | null>(cachedAdmin)
+  const [status, setStatus] = useState<'checking' | 'allowed' | 'denied' | 'timeout' | 'error'>(
+    cachedAdmin ? 'allowed' : 'checking'
+  )
+  const checkedOnce = useRef(false)
 
   const isLoginPage = pathname === '/admin/login'
 
@@ -26,8 +47,11 @@ export function AdminAuthGate({ children }: { children: React.ReactNode }) {
       return
     }
 
-    setStatus('checking')
-    setUser(null)
+    const hadCache = !!(
+      useUserStore.getState().user &&
+      isAdminRole(useUserStore.getState().user?.role)
+    )
+    if (!hadCache) setStatus('checking')
 
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), AUTH_CHECK_TIMEOUT_MS)
@@ -36,42 +60,49 @@ export function AdminAuthGate({ children }: { children: React.ReactNode }) {
       const res = await fetch('/api/auth/me', {
         credentials: 'include',
         signal: controller.signal,
+        cache: 'no-store',
       })
       clearTimeout(timeoutId)
       const data = await res.json().catch(() => ({ user: null }))
 
       if (res.ok && data.user) {
-        const u = data.user
-        if (u.role !== 'ADMIN' && u.role !== 'MANAGER') {
+        const u = data.user as GateUser
+        if (!isAdminRole(u.role)) {
+          clearUserStore()
+          setUser(null)
           setStatus('denied')
           router.replace('/')
           return
         }
-        setUserStore(u)
+        setUserStore(u as any)
         setUser(u)
         setStatus('allowed')
         return
       }
 
+      clearUserStore()
+      setUser(null)
       setStatus('denied')
       router.replace('/admin/login')
     } catch (err: unknown) {
       clearTimeout(timeoutId)
       const isAbort = err instanceof Error && err.name === 'AbortError'
-      if (isAbort) {
-        setStatus('timeout')
-      } else {
-        setStatus('error')
-      }
+      // Keep cached admin UI on transient errors
+      if (hadCache) return
+      setStatus(isAbort ? 'timeout' : 'error')
     }
-  }, [router, setUserStore, isLoginPage])
+  }, [router, setUserStore, clearUserStore, isLoginPage])
 
   useEffect(() => {
     if (isLoginPage) {
       setStatus('allowed')
       return
     }
-    check()
+    // Revalidate once per mount (and when leaving login)
+    if (!checkedOnce.current) {
+      checkedOnce.current = true
+      check()
+    }
   }, [isLoginPage, check])
 
   if (isLoginPage) {
@@ -91,7 +122,13 @@ export function AdminAuthGate({ children }: { children: React.ReactNode }) {
             : 'Could not verify your session.'}
         </p>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => check()}>
+          <Button
+            variant="outline"
+            onClick={() => {
+              checkedOnce.current = false
+              check()
+            }}
+          >
             Retry
           </Button>
           <Button asChild>
@@ -115,13 +152,10 @@ export function AdminAuthGate({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background">
-      <AuthSync />
       <AdminSidebar user={user} />
       <div className="lg:pl-64">
         <AdminHeader user={user} />
-        <main className="p-4 lg:p-6">
-          {children}
-        </main>
+        <main className="p-4 lg:p-6">{children}</main>
       </div>
     </div>
   )

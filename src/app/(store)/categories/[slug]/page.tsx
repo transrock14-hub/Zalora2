@@ -1,11 +1,15 @@
 import { Suspense } from 'react'
-import { unstable_noStore as noStore } from 'next/cache'
+import { unstable_cache } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabase'
 import { notFound } from 'next/navigation'
+import {
+  countPublishedInCategory,
+  fetchPrimaryImageMap,
+  mapProductCard,
+} from '@/lib/product-list'
 import { CategoryProductsClient } from './category-products-client'
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+export const revalidate = 60
 
 interface SearchParams {
   page?: string
@@ -20,35 +24,24 @@ function normalizeSlug(s: string): string {
     .replace(/[^a-z0-9-]/g, '')
 }
 
-async function getCategoryData(slug: string, searchParams: SearchParams) {
-  noStore()
-  const slugDecoded = decodeURIComponent(slug || '').trim()
-  if (!slugDecoded) return null
-
-  // Do NOT embed children via PostgREST self-FK hint — live DB has parentId
-  // column but no `categories_parentId_fkey` in the schema cache, which made
-  // /categories/[slug] return 404 (blank page). Fetch children separately.
-
-  // Try exact match first
+async function resolveCategory(slugDecoded: string) {
   let result = await supabaseAdmin
     .from('categories')
-    .select('*')
+    .select('id, name, slug, description, icon, image, parentId, isActive')
     .eq('slug', slugDecoded)
     .maybeSingle()
 
-  // Try normalized slug (lowercase, spaces to hyphens) if no exact match
   if (!result.data && slugDecoded) {
     const normalized = normalizeSlug(slugDecoded) || slugDecoded
     if (normalized !== slugDecoded) {
       result = await supabaseAdmin
         .from('categories')
-        .select('*')
+        .select('id, name, slug, description, icon, image, parentId, isActive')
         .eq('slug', normalized)
         .maybeSingle()
     }
   }
 
-  // Try case-insensitive match
   if (!result.data) {
     const { data: all } = await supabaseAdmin
       .from('categories')
@@ -60,32 +53,27 @@ async function getCategoryData(slug: string, searchParams: SearchParams) {
     if (match) {
       const byId = await supabaseAdmin
         .from('categories')
-        .select('*')
+        .select('id, name, slug, description, icon, image, parentId, isActive')
         .eq('id', match.id)
         .single()
       if (byId.data) result = byId
     }
   }
 
-  const category = result.data
-  if (!category) {
-    return null
-  }
+  return result.data
+}
 
-  const { data: childRows } = await supabaseAdmin
-    .from('categories')
-    .select('id, name, slug, isActive')
-    .eq('parentId', category.id)
-    .eq('isActive', true)
-    .order('sortOrder', { ascending: true })
+async function getCategoryDataUncached(slug: string, searchParams: SearchParams) {
+  const slugDecoded = decodeURIComponent(slug || '').trim()
+  if (!slugDecoded) return null
 
-  const activeChildren = childRows || []
+  const category = await resolveCategory(slugDecoded)
+  if (!category) return null
 
-  const page = parseInt(searchParams.page || '1')
+  const page = parseInt(searchParams.page || '1') || 1
   const limit = 20
   const skip = (page - 1) * limit
 
-  // Build order by
   let orderByColumn = 'createdAt'
   let orderByAscending = false
 
@@ -103,65 +91,51 @@ async function getCategoryData(slug: string, searchParams: SearchParams) {
     orderByAscending = false
   }
 
-  // Robust fetch that mirrors /api/store/products (which works on the live
-  // runtime). The live server returns empty for `!inner` embedded joins and
-  // for `count: 'exact'`/head-count requests, so we use plain row selects and
-  // fetch primary images separately.
-  const { data: productRows, error: productsError } = await supabaseAdmin
-    .from('products')
-    .select('id, name, slug, price, comparePrice, rating, totalReviews, isFeatured, createdAt')
-    .eq('categoryId', category.id)
-    .eq('status', 'PUBLISHED')
-    .order(orderByColumn, { ascending: orderByAscending })
-    .range(skip, skip + limit - 1)
+  const [childRowsRes, productRowsRes, total] = await Promise.all([
+    supabaseAdmin
+      .from('categories')
+      .select('id, name, slug, isActive')
+      .eq('parentId', category.id)
+      .eq('isActive', true)
+      .order('sortOrder', { ascending: true }),
+    supabaseAdmin
+      .from('products')
+      .select('id, name, slug, price, comparePrice, rating, totalReviews, isFeatured, createdAt')
+      .eq('categoryId', category.id)
+      .eq('status', 'PUBLISHED')
+      .order(orderByColumn, { ascending: orderByAscending })
+      .range(skip, skip + limit - 1),
+    countPublishedInCategory(category.id),
+  ])
 
-  if (productsError) {
-    throw productsError
+  if (productRowsRes.error) {
+    throw productRowsRes.error
   }
 
-  // Total via a lightweight id select (exact/head counts are unreliable on live).
-  const { data: idRows } = await supabaseAdmin
-    .from('products')
-    .select('id')
-    .eq('categoryId', category.id)
-    .eq('status', 'PUBLISHED')
-    .limit(1000)
-  const total = idRows?.length ?? 0
-
-  // Primary image per product for the current page.
-  const productIds = (productRows || []).map((p: any) => p.id)
-  const imageMap: Record<string, string> = {}
-  if (productIds.length > 0) {
-    const { data: images } = await supabaseAdmin
-      .from('product_images')
-      .select('productId, url, isPrimary')
-      .in('productId', productIds)
-      .order('isPrimary', { ascending: false })
-    for (const img of images || []) {
-      if (!imageMap[img.productId]) imageMap[img.productId] = img.url
-    }
-  }
+  const productRows = productRowsRes.data || []
+  const imageMap = await fetchPrimaryImageMap(productRows.map((p: any) => p.id))
 
   return {
     category: {
       ...category,
-      children: activeChildren,
+      children: childRowsRes.data || [],
     },
-    products: (productRows || []).map((p: any) => ({
-      id: p.id,
-      name: p.name,
-      slug: p.slug,
-      price: Number(p.price),
-      comparePrice: p.comparePrice ? Number(p.comparePrice) : null,
-      rating: Number(p.rating || 0),
-      reviews: p.totalReviews || 0,
-      image: imageMap[p.id] || '/placeholder-product.jpg',
-      isFeatured: p.isFeatured,
-    })),
+    products: productRows.map((p: any) => mapProductCard(p, imageMap[p.id])),
     total,
     pages: Math.ceil(total / limit),
     page,
   }
+}
+
+async function getCategoryData(slug: string, searchParams: SearchParams) {
+  const page = searchParams.page || '1'
+  const sort = searchParams.sort || 'newest'
+  const cached = unstable_cache(
+    () => getCategoryDataUncached(slug, searchParams),
+    ['category-page', slug, page, sort],
+    { revalidate: 60, tags: ['products', 'categories'] }
+  )
+  return cached()
 }
 
 export default async function CategoryPage({

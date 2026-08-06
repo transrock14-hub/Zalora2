@@ -1,79 +1,84 @@
 import { unstable_cache } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabase'
+import { mapProductCard, PRODUCT_CARD_COLUMNS } from '@/lib/product-list'
 import { HomePageClient } from './home-client'
 
-// Avoid prerender-time DB access on deploy/build environments.
-export const dynamic = 'force-dynamic'
+export const revalidate = 60
 
-// Cache the (heavy) home data across requests with tag-based revalidation.
-// Admin product/category/hero-slide mutations call revalidateTag(...) to bust it.
+// Cache home data across requests; admin mutations call revalidateTag(...) to bust it.
 const getCachedHomeData = unstable_cache(
   async () => {
-    const [featuredProductsResult, newArrivalsResult, categoriesResult, heroSlidesResult] = await Promise.all([
-      supabaseAdmin
-        .from('products')
-        .select(`
-          *,
-          images:product_images (
-            url,
-            isPrimary
-          )
-        `)
-        .eq('isFeatured', true)
-        .eq('status', 'PUBLISHED')
-        .order('createdAt', { ascending: false })
-        .limit(8),
-      supabaseAdmin
-        .from('products')
-        .select(`
-          *,
-          images:product_images (
-            url,
-            isPrimary
-          )
-        `)
-        .eq('status', 'PUBLISHED')
-        .order('createdAt', { ascending: false })
-        .limit(8),
-      supabaseAdmin
-        .from('categories')
-        .select('*')
-        .eq('isActive', true)
-        .eq('showOnHome', true)
-        .is('parentId', null)
-        .order('sortOrder', { ascending: true })
-        .limit(12),
-      supabaseAdmin
-        .from('hero_slides')
-        .select('*')
-        .eq('isActive', true)
-        .order('sortOrder', { ascending: true })
-        .limit(12),
-    ])
+    const productSelect = `
+      ${PRODUCT_CARD_COLUMNS},
+      images:product_images (
+        url,
+        isPrimary
+      )
+    `
+    const [featuredProductsResult, newArrivalsResult, categoriesResult, heroSlidesResult] =
+      await Promise.all([
+        supabaseAdmin
+          .from('products')
+          .select(productSelect)
+          .eq('isFeatured', true)
+          .eq('status', 'PUBLISHED')
+          .order('createdAt', { ascending: false })
+          .limit(8),
+        supabaseAdmin
+          .from('products')
+          .select(productSelect)
+          .eq('status', 'PUBLISHED')
+          .order('createdAt', { ascending: false })
+          .limit(8),
+        supabaseAdmin
+          .from('categories')
+          .select('id, name, slug, icon, image, sortOrder')
+          .eq('isActive', true)
+          .eq('showOnHome', true)
+          .is('parentId', null)
+          .order('sortOrder', { ascending: true })
+          .limit(12),
+        supabaseAdmin
+          .from('hero_slides')
+          .select('id, title, subtitle, image, mobileImage, ctaText, ctaLink, sortOrder, isActive')
+          .eq('isActive', true)
+          .order('sortOrder', { ascending: true })
+          .limit(12),
+      ])
 
-    // Map products to include a single image URL for display (primary or first)
     const mapProduct = (p: any) => {
       const images = p.images || []
       const primary = images.find((img: any) => img.isPrimary) || images[0]
-      const image = primary?.url || '/images/logo.png'
-      return {
-        ...p,
-        images,
-        image,
-        reviews: p.totalReviews ?? 0,
-      }
+      return mapProductCard(p, primary?.url)
     }
     const featuredProducts = (featuredProductsResult.data || []).map(mapProduct).slice(0, 4)
     const newArrivals = (newArrivalsResult.data || []).map(mapProduct).slice(0, 4)
 
+    const palette = [
+      { color: '#E3F2FD', iconColor: '#1976D2' },
+      { color: '#FFF3E0', iconColor: '#F57C00' },
+      { color: '#FFF8E1', iconColor: '#FFA000' },
+      { color: '#F3E5F5', iconColor: '#7B1FA2' },
+      { color: '#E0F2F1', iconColor: '#00796B' },
+      { color: '#FCE4EC', iconColor: '#C2185B' },
+      { color: '#E8EAF6', iconColor: '#303F9F' },
+      { color: '#FBE9E7', iconColor: '#D84315' },
+      { color: '#F1F8E9', iconColor: '#689F38' },
+      { color: '#EFEBE9', iconColor: '#5D4037' },
+      { color: '#E0F7FA', iconColor: '#0097A7' },
+    ]
+
     return {
       featuredProducts,
       newArrivals,
-      categories: categoriesResult.data || [],
+      categories: (categoriesResult.data || []).map((c: any, i: number) => ({
+        ...c,
+        ...palette[i % palette.length],
+      })),
       heroSlides: heroSlidesResult.data || [],
     }
   },
-  ['home-data-v2'],
+  ['home-data-v3'],
   { revalidate: 60, tags: ['home', 'products', 'categories', 'hero_slides'] }
 )
 

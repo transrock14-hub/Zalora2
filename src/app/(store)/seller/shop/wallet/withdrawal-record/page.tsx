@@ -7,8 +7,10 @@ export const dynamic = 'force-dynamic'
 export default async function SellerShopWithdrawalRecordPage() {
   const user = await getCurrentUser()
   if (!user) return null
-  const { shop } = await getSellerShopAccess(user.id)
+  const { shop, canAccessShop, isOrderSlaBlocked } = await getSellerShopAccess(user.id)
   if (!shop) redirect('/seller/create-shop')
+  if (isOrderSlaBlocked) redirect('/seller/blocked')
+  if (!canAccessShop) redirect('/seller/verification-status')
 
   return (
     <WithdrawalRecordClient

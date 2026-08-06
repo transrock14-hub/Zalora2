@@ -95,8 +95,10 @@ export default async function SellerProductsPage({
 
   if (!user) return null
 
-  const { shop } = await getSellerShopAccess(user.id)
+  const { shop, canAccessShop, isOrderSlaBlocked } = await getSellerShopAccess(user.id)
   if (!shop) redirect('/seller/create-shop')
+  if (isOrderSlaBlocked) redirect('/seller/blocked')
+  if (!canAccessShop) redirect('/seller/verification-status')
 
   const data = await getSellerProducts(shop.id, searchParams)
   return <SellerProductsClient {...data} searchParams={searchParams} />

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { getSession } from '@/lib/auth'
+import { assertSellerCanMutateShop } from '@/lib/seller-access'
 
 export async function GET(
   req: NextRequest,
@@ -122,18 +123,9 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get user with shop
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('shops (*)')
-      .eq('id', session.userId)
-      .single()
-
-    if (!user?.shops || !Array.isArray(user.shops) || user.shops.length === 0) {
-      return NextResponse.json({ error: 'Shop not found' }, { status: 404 })
-    }
-
-    const shop = user.shops[0]
+    const access = await assertSellerCanMutateShop(session.userId)
+    if (!access.ok) return access.response
+    const shop = access.shop
 
     // Verify product belongs to user's shop
     const { data: product, error: productError } = await supabaseAdmin

@@ -153,17 +153,18 @@ export async function getSession(): Promise<JWTPayload | null> {
       } = await supabase.auth.getUser()
 
       if (!error && user) {
-        if (!(await hasValidExclusiveSession(user.id))) {
-          return null
-        }
-        const appUser = await getAppUserById(user.id)
-        if (appUser) {
+        const [valid, appUser] = await Promise.all([
+          hasValidExclusiveSession(user.id),
+          getAppUserById(user.id),
+        ])
+        if (valid && appUser) {
           return {
             userId: appUser.id,
             email: appUser.email,
             role: appUser.role,
           }
         }
+        return null
       }
     }
   } catch (e) {
@@ -204,7 +205,9 @@ async function getAppUserById(
           slug,
           status,
           level,
-          balance
+          balance,
+          autoBlockedAt,
+          autoBlockReason
         )
       `)
       .eq('id', userId)
@@ -219,7 +222,16 @@ async function getAppUserById(
   const user = userResult.data
   if (user.status !== UserStatus.ACTIVE) return null
   const userSellingEnabled = settingResult.data?.value === 'true'
-  type ShopRow = { id: string; name: string; slug: string; status: string; level?: string; balance?: number }
+  type ShopRow = {
+    id: string
+    name: string
+    slug: string
+    status: string
+    level?: string
+    balance?: number
+    autoBlockedAt?: string | null
+    autoBlockReason?: string | null
+  }
   const rawShops = user.shops
   const shopRow: ShopRow | null =
     Array.isArray(rawShops) && rawShops.length > 0
@@ -245,6 +257,8 @@ async function getAppUserById(
           status: shop.status,
           level: shop.level ?? 'BRONZE',
           balance: Number(shop.balance ?? 0),
+          autoBlockedAt: shop.autoBlockedAt ?? null,
+          autoBlockReason: shop.autoBlockReason ?? null,
         }
       : null,
     isImpersonating: sessionOverrides?.isImpersonating ?? false,
@@ -262,31 +276,44 @@ export async function getCurrentUser() {
       return null
     }
 
-    // 1) Supabase Auth (email provider) – cookies managed by @supabase/ssr, reliable on serverless
+    // 1) Supabase Auth (email provider) – cookies managed by @supabase/ssr
     if (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
       try {
         const supabase = await createSupabaseServerClient()
-        const { data: { user: authUser } } = await supabase.auth.getUser()
+        const {
+          data: { user: authUser },
+        } = await supabase.auth.getUser()
         if (authUser?.id) {
-          if (!(await hasValidExclusiveSession(authUser.id))) {
-            return null
-          }
-          const appUser = await getAppUserById(authUser.id)
-          if (appUser) return appUser
+          // Session validity + user row in parallel (was sequential waterfall)
+          const [valid, appUser] = await Promise.all([
+            hasValidExclusiveSession(authUser.id),
+            getAppUserById(authUser.id),
+          ])
+          if (valid && appUser) return appUser
+          return null
         }
-      } catch (e) {
-        // Supabase client or cookie read failed; fall back to legacy
+      } catch {
+        // Fall through to legacy JWT
       }
     }
 
-    // 2) Legacy JWT cookie (existing users, or when Supabase Auth not configured)
-    const session = await getSession()
-    if (!session) return null
-    if (session.exp && session.exp < Date.now() / 1000) return null
-    return getAppUserById(session.userId, {
-      isImpersonating: !!session.impersonatedBy,
-      impersonatedBy: session.impersonatedBy,
-    })
+    // 2) Legacy JWT cookie — avoid getSession() here (it re-runs Supabase Auth)
+    const cookieStore = await cookies()
+    const token = cookieStore.get('auth-token')?.value
+    if (!token) return null
+    const payload = await verifyToken(token)
+    if (!payload) return null
+    if (payload.exp && payload.exp < Date.now() / 1000) return null
+
+    const [valid, appUser] = await Promise.all([
+      hasValidExclusiveSession(payload.userId),
+      getAppUserById(payload.userId, {
+        isImpersonating: !!payload.impersonatedBy,
+        impersonatedBy: payload.impersonatedBy,
+      }),
+    ])
+    if (!valid) return null
+    return appUser
   } catch (error) {
     console.error('getCurrentUser error:', error)
     return null
@@ -295,12 +322,15 @@ export async function getCurrentUser() {
 
 /**
  * Get seller's shop and KYC verification. Use to gate access to shop dashboard/products/orders.
- * Redirect to /seller/verification-status if canAccessShop is false.
+ * Redirect to /seller/verification-status if canAccessShop is false and not order-SLA blocked.
+ * When order-SLA blocked, only Store Orders + Top Up should remain available.
  */
 export async function getSellerShopAccess(userId: string): Promise<{
   shop: { id: string; name: string; slug: string; status: string; [key: string]: any } | null
   verification: { status: string; [key: string]: any } | null
   canAccessShop: boolean
+  isOrderSlaBlocked: boolean
+  canAccessOrdersAndTopUp: boolean
 }> {
   const [shopResult, verificationResult] = await Promise.all([
     supabaseAdmin
@@ -315,18 +345,35 @@ export async function getSellerShopAccess(userId: string): Promise<{
       .maybeSingle(),
   ])
 
-  const shop = shopResult.data
+  let shop = shopResult.data
   const verification = verificationResult.data
+  const kycApproved = !!verification && verification.status === 'APPROVED'
+
+  // Lazy SLA enforcement so shops get blocked/unblocked even without cron.
+  if (shop && kycApproved) {
+    try {
+      const { enforceOrderSlaForShop } = await import('@/lib/shop-order-sla')
+      shop = await enforceOrderSlaForShop(shop)
+    } catch (e) {
+      console.error('getSellerShopAccess SLA enforce error:', e)
+    }
+  }
+
+  const isOrderSlaBlocked =
+    !!shop && shop.status === ShopStatus.SUSPENDED && !!shop.autoBlockedAt
+
   const canAccessShop =
-    !!shop &&
-    shop.status === ShopStatus.ACTIVE &&
-    !!verification &&
-    verification.status === 'APPROVED'
+    !!shop && shop.status === ShopStatus.ACTIVE && kycApproved
+
+  const canAccessOrdersAndTopUp =
+    !!shop && kycApproved && (shop.status === ShopStatus.ACTIVE || isOrderSlaBlocked)
 
   return {
     shop: shop || null,
     verification: verification || null,
     canAccessShop,
+    isOrderSlaBlocked,
+    canAccessOrdersAndTopUp,
   }
 }
 

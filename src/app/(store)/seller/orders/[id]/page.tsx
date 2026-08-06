@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { getCurrentUser } from '@/lib/auth'
+import { getCurrentUser, getSellerShopAccess } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { SellerOrderDetailsClient } from './order-details-client'
 
@@ -133,6 +133,11 @@ export default async function SellerOrderDetailsPage({
 
   if (!currentUser.canSell) {
     redirect('/account')
+  }
+
+  const { canAccessOrdersAndTopUp } = await getSellerShopAccess(currentUser.id)
+  if (!canAccessOrdersAndTopUp) {
+    redirect('/seller/verification-status')
   }
 
   const { id } = await params

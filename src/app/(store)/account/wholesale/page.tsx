@@ -1,5 +1,7 @@
-import { getCurrentUser } from '@/lib/auth'
+import { redirect } from 'next/navigation'
+import { getCurrentUser, getSellerShopAccess } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
+import { mapProductCard, PRODUCT_CARD_COLUMNS } from '@/lib/product-list'
 import { WholesaleClient } from './wholesale-client'
 import { salesPriceFromWholesale } from '@/lib/wholesale-pricing'
 
@@ -29,15 +31,18 @@ async function getWholesaleData(userId: string, searchParams: SearchParams) {
   // Build query: only admin catalog products available for wholesale (shopId null, wholesalePrice set)
   let productsQuery = supabaseAdmin
     .from('products')
-    .select(`
-      *,
+    .select(
+      `
+      ${PRODUCT_CARD_COLUMNS},
       images:product_images!inner (
         url
       ),
       category:categories!products_categoryId_fkey (
         name
       )
-    `, { count: 'exact' })
+    `,
+      { count: 'exact' }
+    )
     .eq('status', 'PUBLISHED')
     .is('shopId', null)
     .not('wholesalePrice', 'is', null)
@@ -56,9 +61,9 @@ async function getWholesaleData(userId: string, searchParams: SearchParams) {
     productsQuery = productsQuery.lte('wholesalePrice', parseFloat(searchParams.maxPrice))
   }
 
-  // Search filter
   if (searchParams.search) {
-    productsQuery = productsQuery.or(`name.ilike.%${searchParams.search}%,description.ilike.%${searchParams.search}%`)
+    const q = searchParams.search.replace(/[%_,]/g, ' ')
+    productsQuery = productsQuery.or(`name.ilike.%${q}%,shortDesc.ilike.%${q}%`)
   }
 
   // Apply pagination and ordering
@@ -102,21 +107,12 @@ async function getWholesaleData(userId: string, searchParams: SearchParams) {
           : p.salePrice != null
             ? Number(p.salePrice)
             : Number(p.price)
-      return {
-        id: p.id,
-        name: p.name,
-        slug: p.slug,
-        price: Number(p.price),
-        comparePrice: p.comparePrice ? Number(p.comparePrice) : null,
+      return mapProductCard(p, p.images?.[0]?.url, {
         wholesalePrice,
         salePrice,
-        rating: Number(p.rating || 0),
-        reviews: p.totalReviews || 0,
-        image: p.images && p.images.length > 0 ? p.images[0].url : '/placeholder-product.jpg',
         categoryId: p.categoryId,
         categoryName: p.category?.name || 'Uncategorized',
-        isFeatured: p.isFeatured,
-      }
+      })
     }),
     total,
     pages: Math.ceil(total / limit),
@@ -133,6 +129,14 @@ export default async function WholesalePage({
   const user = await getCurrentUser()
 
   if (!user) return null
+
+  const { isOrderSlaBlocked, canAccessShop } = await getSellerShopAccess(user.id)
+  if (isOrderSlaBlocked) {
+    redirect('/seller/blocked')
+  }
+  if (user.canSell && !canAccessShop) {
+    redirect('/seller/verification-status')
+  }
 
   const data = await getWholesaleData(user.id, searchParams)
   return <WholesaleClient {...data} user={user} searchParams={searchParams} />

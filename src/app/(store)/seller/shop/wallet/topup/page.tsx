@@ -8,8 +8,9 @@ export const dynamic = 'force-dynamic'
 export default async function SellerShopTopUpPage() {
   const user = await getCurrentUser()
   if (!user) return null
-  const { shop } = await getSellerShopAccess(user.id)
+  const { shop, canAccessOrdersAndTopUp, isOrderSlaBlocked } = await getSellerShopAccess(user.id)
   if (!shop) redirect('/seller/create-shop')
+  if (!canAccessOrdersAndTopUp) redirect('/seller/verification-status')
 
   // Shops use platform (admin) deposit addresses only; no shop-specific addresses
   const { data: addresses } = await supabaseAdmin
@@ -23,7 +24,7 @@ export default async function SellerShopTopUpPage() {
     <RechargeMethodsClient
       addresses={addresses || []}
       depositBasePath="/seller/shop/wallet/topup/deposit"
-      backHref="/seller/shop"
+      backHref={isOrderSlaBlocked ? '/seller/orders?status=pending&blocked=1' : '/seller/shop'}
       recordHref="/seller/shop/wallet/recharge-record"
     />
   )

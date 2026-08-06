@@ -217,6 +217,16 @@ export async function PATCH(
       throw updateError
     }
 
+    // If admin marks shipped, clear any order-SLA auto-block on the shop.
+    if (status === 'SHIPPED' && order?.shopId) {
+      try {
+        const { tryUnblockShopAfterOrdersProcessed } = await import('@/lib/shop-order-sla')
+        await tryUnblockShopAfterOrdersProcessed(order.shopId as string)
+      } catch (e) {
+        console.error('Order SLA unblock (admin) error', e)
+      }
+    }
+
     // Reseller money flow: charge wholesale when the order first becomes paid
     // (if not already charged on ship). Soft-fail so payment approval still works.
     if (nowPaid && !wasPaid) {

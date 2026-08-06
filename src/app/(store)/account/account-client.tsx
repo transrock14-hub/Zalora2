@@ -18,6 +18,8 @@ interface User {
     id: string
     name: string
     status?: string
+    autoBlockedAt?: string | null
+    autoBlockReason?: string | null
   } | null
 }
 
@@ -33,19 +35,41 @@ interface AccountClientProps {
 export function AccountClient({ user, stats }: AccountClientProps) {
   const { t } = useLanguage()
   const hasNoShop = !user.shop
+  const isOrderSlaBlocked =
+    !!user.shop && user.shop.status === 'SUSPENDED' && !!user.shop.autoBlockedAt
   const hasApprovedShop = !!(user.shop && user.shop.status === 'ACTIVE')
-  const hasShopPending = !!user.shop && user.shop.status !== 'ACTIVE'
+  const hasShopPending =
+    !!user.shop && user.shop.status !== 'ACTIVE' && !isOrderSlaBlocked
+
+  // Seller tools disabled while order-SLA blocked (only Store Orders + Top Up remain).
+  const sellerToolsWhenBlocked = new Set<TranslationKey>(['storeOrders', 'walletManagement'])
 
   // When no shop: only Apply for shop active; others inactive with message.
   // When shop approved: all active except Apply for shop (and no "Apply for a Job").
   // When shop pending: Verification Status active; others inactive.
-  const menuItems: Array<{ icon: string; labelKey: TranslationKey; href: string; color: string; show: boolean; badge?: number; requiresShop?: boolean }> = [
+  const menuItems: Array<{
+    icon: string
+    labelKey: TranslationKey
+    href: string
+    color: string
+    show: boolean
+    badge?: number
+    requiresShop?: boolean
+  }> = [
     { icon: 'solar:cart-large-2-bold', labelKey: 'wholesaleManagement', href: '/account/wholesale', color: 'text-chart-1', show: user.canSell, requiresShop: true },
     { icon: 'solar:shop-bold', labelKey: 'applyForShop', href: '/seller/create-shop', color: 'text-chart-2', show: !user.shop, requiresShop: false },
     { icon: 'solar:chart-2-bold', labelKey: 'sellerDashboard', href: '/seller/dashboard', color: 'text-chart-2', show: user.canSell, requiresShop: true },
     { icon: 'solar:shop-bold', labelKey: 'shopDetails', href: '/seller/shop', color: 'text-chart-2', show: user.canSell && !!user.shop, requiresShop: true },
     { icon: 'solar:box-bold', labelKey: 'productManagement', href: '/seller/products', color: 'text-chart-2', show: user.canSell && !!user.shop, requiresShop: true },
-    { icon: 'solar:bill-list-bold', labelKey: 'storeOrders', href: '/seller/orders', color: 'text-cyan-500', show: user.canSell && !!user.shop, badge: (stats.sellerOrdersCount ?? 0) || undefined, requiresShop: true },
+    {
+      icon: 'solar:bill-list-bold',
+      labelKey: 'storeOrders',
+      href: isOrderSlaBlocked ? '/seller/orders?status=pending&blocked=1' : '/seller/orders',
+      color: 'text-cyan-500',
+      show: user.canSell && !!user.shop,
+      badge: (stats.sellerOrdersCount ?? 0) || undefined,
+      requiresShop: true,
+    },
     { icon: 'solar:verified-check-bold', labelKey: 'verificationStatusCaption', href: '/seller/verification-status', color: 'text-cyan-500', show: !!user.shop || user.canSell, requiresShop: false },
     { icon: 'solar:document-text-bold', labelKey: 'billingRecords', href: '/account/billing', color: 'text-chart-3', show: true, requiresShop: false },
     { icon: 'solar:map-point-bold', labelKey: 'deliveryAddress', href: '/account/addresses', color: 'text-destructive', show: true, requiresShop: true },
@@ -64,9 +88,25 @@ export function AccountClient({ user, stats }: AccountClientProps) {
   const isInactive = (item: (typeof menuItems)[0]) => {
     if (item.labelKey === 'applyForShop') return false
     if (hasNoShop) return item.requiresShop === true || item.labelKey === 'verificationStatusCaption'
+    if (isOrderSlaBlocked) {
+      if (sellerToolsWhenBlocked.has(item.labelKey)) return false
+      return (
+        item.labelKey === 'wholesaleManagement' ||
+        item.labelKey === 'sellerDashboard' ||
+        item.labelKey === 'shopDetails' ||
+        item.labelKey === 'productManagement'
+      )
+    }
     if (hasShopPending) return item.requiresShop === true
     if (hasApprovedShop) return false
     return false
+  }
+
+  const inactiveHint = (item: (typeof menuItems)[0]) => {
+    if (isOrderSlaBlocked && !sellerToolsWhenBlocked.has(item.labelKey) && item.requiresShop) {
+      return t('orderSlaBlockedMenuHint')
+    }
+    return t('approveShopToAccess')
   }
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20 font-sans text-foreground">
@@ -159,6 +199,21 @@ export function AccountClient({ user, stats }: AccountClientProps) {
           </Link>
         </div>
 
+        {isOrderSlaBlocked && (
+          <div className="bg-destructive/5 border border-destructive/30 px-4 py-3 mb-2">
+            <p className="text-base font-bold text-destructive">{t('merchantStoreBlocked')}</p>
+            <p className="text-sm text-muted-foreground mt-1">{t('orderSlaBlockedMessage')}</p>
+            <div className="mt-2 flex gap-4 text-sm">
+              <Link href="/seller/orders?status=pending&blocked=1" className="font-medium text-destructive underline underline-offset-2">
+                {t('storeOrders')}
+              </Link>
+              <Link href="/account/wallet/topup" className="font-medium text-destructive underline underline-offset-2">
+                {t('topUp')}
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* Top-up / Withdrawal - matches reference (lowercase "top up") */}
         <div className="bg-card mb-2">
           <div className="flex py-3 divide-x divide-border">
@@ -166,18 +221,31 @@ export function AccountClient({ user, stats }: AccountClientProps) {
               <Icon icon="solar:download-linear" className="size-5 text-muted-foreground" />
               <span className="text-sm font-medium">{t('topUp')}</span>
             </Link>
-            <Link href="/account/wallet/withdraw" className="flex-1 flex items-center justify-center gap-2 py-1">
-              <Icon icon="solar:upload-linear" className="size-5 text-muted-foreground" />
-              <span className="text-sm font-medium">{t('withdrawal')}</span>
-            </Link>
+            {isOrderSlaBlocked ? (
+              <Link href="/seller/blocked" className="flex-1 flex items-center justify-center gap-2 py-1 opacity-60">
+                <Icon icon="solar:upload-linear" className="size-5 text-muted-foreground" />
+                <span className="text-sm font-medium">{t('withdrawal')}</span>
+              </Link>
+            ) : (
+              <Link href="/account/wallet/withdraw" className="flex-1 flex items-center justify-center gap-2 py-1">
+                <Icon icon="solar:upload-linear" className="size-5 text-muted-foreground" />
+                <span className="text-sm font-medium">{t('withdrawal')}</span>
+              </Link>
+            )}
           </div>
           <div className="flex gap-4 px-4 pb-3 text-sm">
             <Link href="/account/wallet/recharge-record" className="text-primary hover:underline">
               {t('rechargeRecord')}
             </Link>
-            <Link href="/account/wallet/withdrawal-record" className="text-primary hover:underline">
-              {t('withdrawalRecord')}
-            </Link>
+            {isOrderSlaBlocked ? (
+              <Link href="/seller/blocked" className="text-destructive hover:underline">
+                {t('withdrawalRecord')}
+              </Link>
+            ) : (
+              <Link href="/account/wallet/withdrawal-record" className="text-primary hover:underline">
+                {t('withdrawalRecord')}
+              </Link>
+            )}
           </div>
         </div>
 
@@ -202,6 +270,26 @@ export function AccountClient({ user, stats }: AccountClientProps) {
           )}
           {visibleMenuItems.map((item, index) =>
             isInactive(item) ? (
+              isOrderSlaBlocked &&
+              (item.labelKey === 'wholesaleManagement' ||
+                item.labelKey === 'sellerDashboard' ||
+                item.labelKey === 'shopDetails' ||
+                item.labelKey === 'productManagement') ? (
+                <Link
+                  key={item.href + index}
+                  href="/seller/blocked"
+                  className={`flex items-center px-4 py-3.5 opacity-80 active:bg-muted/30 ${
+                    index < visibleMenuItems.length - 1 ? 'border-b border-border/50' : ''
+                  }`}
+                >
+                  <Icon icon={item.icon} className={`size-6 ${item.color} mr-3`} />
+                  <span className="flex-1">
+                    <span className="text-sm font-medium block">{t(item.labelKey)}</span>
+                    <span className="text-xs text-destructive font-medium">{t('merchantStoreBlocked')}</span>
+                  </span>
+                  <Icon icon="solar:lock-keyhole-bold" className="size-4 text-destructive" />
+                </Link>
+              ) : (
               <div
                 key={item.href + index}
                 className={`flex items-center px-4 py-3.5 opacity-60 cursor-not-allowed ${
@@ -212,10 +300,11 @@ export function AccountClient({ user, stats }: AccountClientProps) {
                 <Icon icon={item.icon} className={`size-6 ${item.color} mr-3`} />
                 <span className="flex-1">
                   <span className="text-sm font-medium block">{t(item.labelKey)}</span>
-                  <span className="text-xs text-muted-foreground">{t('approveShopToAccess')}</span>
+                  <span className="text-xs text-muted-foreground">{inactiveHint(item)}</span>
                 </span>
                 <Icon icon="solar:alt-arrow-right-linear" className="size-4 text-muted-foreground/50" />
               </div>
+              )
             ) : (
               <Link
                 key={item.href + index}

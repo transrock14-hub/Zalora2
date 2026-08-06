@@ -1,12 +1,15 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { Icon } from '@iconify/react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { formatPrice, getStatusColor } from '@/lib/utils'
+import toast from 'react-hot-toast'
 
 interface Product {
   id: string
@@ -18,11 +21,17 @@ interface Product {
   status: string
   isFeatured: boolean
   categoryName: string
+  shopId: string | null
   shopName: string | null
   image: string | null
 }
 
 interface Category {
+  id: string
+  name: string
+}
+
+interface Shop {
   id: string
   name: string
 }
@@ -33,11 +42,27 @@ interface ProductsClientProps {
   pages: number
   page: number
   categories: Category[]
+  shops: Shop[]
+  selectedShopName: string | null
   searchParams: {
     search?: string
     category?: string
     status?: string
+    shop?: string
+    source?: string
   }
+}
+
+function buildQuery(searchParams: ProductsClientProps['searchParams'], page: number) {
+  const params = new URLSearchParams()
+  if (searchParams.search) params.set('search', searchParams.search)
+  if (searchParams.category) params.set('category', searchParams.category)
+  if (searchParams.status) params.set('status', searchParams.status)
+  if (searchParams.shop) params.set('shop', searchParams.shop)
+  if (searchParams.source) params.set('source', searchParams.source)
+  if (page > 1) params.set('page', String(page))
+  const q = params.toString()
+  return q ? `/admin/products?${q}` : '/admin/products'
 }
 
 export function ProductsClient({
@@ -46,14 +71,48 @@ export function ProductsClient({
   pages,
   page,
   categories,
+  shops,
+  selectedShopName,
   searchParams,
 }: ProductsClientProps) {
+  const router = useRouter()
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  const handleDelete = async (product: Product) => {
+    const target = product.shopName
+      ? `this product from merchant store "${product.shopName}"`
+      : 'this catalog product'
+    if (!confirm(`Delete ${target}? This cannot be undone.`)) return
+
+    setDeletingId(product.id)
+    try {
+      const res = await fetch(`/api/admin/products/${product.id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to delete product')
+        return
+      }
+      toast.success(data.message || (data.archived ? 'Product archived' : 'Product deleted'))
+      router.refresh()
+    } catch {
+      toast.error('Something went wrong')
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold font-heading">Products</h1>
-          <p className="text-muted-foreground">Manage your product catalog</p>
+          <p className="text-muted-foreground">
+            Manage catalog and merchant store products
+            {selectedShopName ? ` · ${selectedShopName}` : ''}
+          </p>
         </div>
         <Link href="/admin/products/new">
           <Button>
@@ -82,6 +141,27 @@ export function ProductsClient({
                 />
               </div>
             </div>
+            <select
+              name="source"
+              defaultValue={searchParams.source || ''}
+              className="px-4 py-2 bg-input border border-border rounded-lg text-sm"
+            >
+              <option value="">All sources</option>
+              <option value="catalog">Catalog only</option>
+              <option value="merchant">Merchant stores only</option>
+            </select>
+            <select
+              name="shop"
+              defaultValue={searchParams.shop || ''}
+              className="px-4 py-2 bg-input border border-border rounded-lg text-sm min-w-[180px]"
+            >
+              <option value="">All shops</option>
+              {shops.map((shop) => (
+                <option key={shop.id} value={shop.id}>
+                  {shop.name}
+                </option>
+              ))}
+            </select>
             <select
               name="category"
               defaultValue={searchParams.category}
@@ -156,6 +236,11 @@ export function ProductsClient({
                   <Badge variant="outline" className={getStatusColor(product.status)}>
                     {product.status}
                   </Badge>
+                  {product.shopName && (
+                    <Badge variant="secondary" className="max-w-[140px] truncate">
+                      {product.shopName}
+                    </Badge>
+                  )}
                   {product.isFeatured && (
                     <Badge variant="secondary">
                       <Icon icon="solar:star-bold" className="mr-1 size-3" />
@@ -163,12 +248,24 @@ export function ProductsClient({
                     </Badge>
                   )}
                 </div>
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <Link href={`/admin/products/${product.id}`}>
                     <Button size="icon" variant="secondary">
                       <Icon icon="solar:pen-bold" className="size-4" />
                     </Button>
                   </Link>
+                  <Button
+                    size="icon"
+                    variant="secondary"
+                    disabled={deletingId === product.id}
+                    onClick={() => handleDelete(product)}
+                    title="Delete product"
+                  >
+                    <Icon
+                      icon={deletingId === product.id ? 'svg-spinners:ring-resize' : 'solar:trash-bin-trash-bold'}
+                      className="size-4 text-destructive"
+                    />
+                  </Button>
                 </div>
               </div>
               <CardContent className="p-4">
@@ -194,8 +291,20 @@ export function ProductsClient({
                     Stock: {product.stock}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                  <span>SKU: {product.sku || 'N/A'}</span>
+                <div className="flex items-center justify-between gap-2 mt-3">
+                  <span className="text-xs text-muted-foreground truncate">
+                    SKU: {product.sku || 'N/A'}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-destructive border-destructive/30 hover:bg-destructive/10"
+                    disabled={deletingId === product.id}
+                    onClick={() => handleDelete(product)}
+                  >
+                    <Icon icon="solar:trash-bin-trash-bold" className="size-4 mr-1" />
+                    Delete
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -207,20 +316,20 @@ export function ProductsClient({
       {pages > 1 && (
         <div className="flex items-center justify-center gap-2">
           <Link
-            href={`/admin/products?page=${Math.max(1, page - 1)}`}
+            href={buildQuery(searchParams, Math.max(1, page - 1))}
             className={page <= 1 ? 'pointer-events-none opacity-50' : ''}
           >
             <Button variant="outline" size="icon">
               <Icon icon="solar:arrow-left-linear" className="size-4" />
             </Button>
           </Link>
-          
+
           <span className="text-sm text-muted-foreground px-4">
             Page {page} of {pages}
           </span>
-          
+
           <Link
-            href={`/admin/products?page=${Math.min(pages, page + 1)}`}
+            href={buildQuery(searchParams, Math.min(pages, page + 1))}
             className={page >= pages ? 'pointer-events-none opacity-50' : ''}
           >
             <Button variant="outline" size="icon">

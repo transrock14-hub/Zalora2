@@ -26,10 +26,37 @@ export async function GET(request: NextRequest) {
 
     const range = (request.nextUrl.searchParams.get('range') || '30d') as DateRange
     const since = rangeStart(['7d', '30d', '90d', 'all'].includes(range) ? range : '30d')
+    // Chart window capped so "all" doesn't pull the entire orders table
+    const chartSince = since ?? (() => {
+      const d = new Date()
+      d.setDate(d.getDate() - 90)
+      d.setHours(0, 0, 0, 0)
+      return d
+    })()
 
-    const ordersInRangeQuery = supabaseAdmin.from('orders').select('id, total, createdAt, paymentStatus, status')
+    let ordersCountQ = supabaseAdmin
+      .from('orders')
+      .select('id', { count: 'exact', head: true })
+    let revenueQ = supabaseAdmin
+      .from('orders')
+      .select('total')
+      .eq('paymentStatus', 'COMPLETED')
+    let pendingQ = supabaseAdmin
+      .from('orders')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'PENDING_PAYMENT')
+    let chartQ = supabaseAdmin
+      .from('orders')
+      .select('total, createdAt, paymentStatus')
+      .gte('createdAt', chartSince.toISOString())
+      .order('createdAt', { ascending: true })
+      .limit(2000)
+
     if (since) {
-      ordersInRangeQuery.gte('createdAt', since.toISOString())
+      const iso = since.toISOString()
+      ordersCountQ = ordersCountQ.gte('createdAt', iso)
+      revenueQ = revenueQ.gte('createdAt', iso)
+      pendingQ = pendingQ.gte('createdAt', iso)
     }
 
     const [
@@ -37,35 +64,43 @@ export async function GET(request: NextRequest) {
       productsCount,
       activeShopsCount,
       openTicketsCount,
-      ordersInRange,
+      ordersCount,
+      revenueRows,
+      pendingCount,
+      chartRows,
       recentOrdersResult,
     ] = await Promise.all([
-      supabaseAdmin.from('users').select('*', { count: 'exact', head: true }),
-      supabaseAdmin.from('products').select('*', { count: 'exact', head: true }),
-      supabaseAdmin.from('shops').select('*', { count: 'exact', head: true }).eq('status', 'ACTIVE'),
-      supabaseAdmin.from('support_tickets').select('*', { count: 'exact', head: true }).eq('status', 'OPEN'),
-      ordersInRangeQuery,
+      supabaseAdmin.from('users').select('id', { count: 'exact', head: true }),
+      supabaseAdmin.from('products').select('id', { count: 'exact', head: true }),
+      supabaseAdmin.from('shops').select('id', { count: 'exact', head: true }).eq('status', 'ACTIVE'),
+      supabaseAdmin
+        .from('support_tickets')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'OPEN'),
+      ordersCountQ,
+      revenueQ.limit(5000),
+      pendingQ,
+      chartQ,
       supabaseAdmin
         .from('orders')
-        .select(`
+        .select(
+          `
           id, orderNumber, total, status, createdAt,
           user:users!orders_userId_fkey ( name )
-        `)
+        `
+        )
         .order('createdAt', { ascending: false })
         .limit(5),
     ])
 
-    const orders = ordersInRange.data || []
-    const totalOrders = orders.length
-    const totalRevenue = orders
-      .filter((o) => o.paymentStatus === 'COMPLETED')
-      .reduce((sum, o) => sum + Number(o.total || 0), 0)
-    const pendingOrders = orders.filter((o) => o.status === 'PENDING_PAYMENT').length
+    const totalRevenue = (revenueRows.data || []).reduce(
+      (sum, o) => sum + Number(o.total || 0),
+      0
+    )
 
-    // Build daily chart buckets
     const chartMap = new Map<string, { date: string; orders: number; revenue: number }>()
-    if (since) {
-      const cursor = new Date(since)
+    {
+      const cursor = new Date(chartSince)
       const end = new Date()
       while (cursor <= end) {
         const key = cursor.toISOString().slice(0, 10)
@@ -73,7 +108,7 @@ export async function GET(request: NextRequest) {
         cursor.setDate(cursor.getDate() + 1)
       }
     }
-    for (const order of orders) {
+    for (const order of chartRows.data || []) {
       const key = dayKey(order.createdAt)
       if (!chartMap.has(key)) {
         chartMap.set(key, { date: key, orders: 0, revenue: 0 })
@@ -89,17 +124,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       range,
       totalUsers: usersCount.count || 0,
-      totalOrders,
+      totalOrders: ordersCount.count || 0,
       totalProducts: productsCount.count || 0,
       totalRevenue,
-      pendingOrders,
+      pendingOrders: pendingCount.count || 0,
       activeShops: activeShopsCount.count || 0,
       openTickets: openTicketsCount.count || 0,
       chartData,
       recentOrders: (recentOrdersResult.data || []).map((order: any) => ({
         id: order.id,
         orderNumber: order.orderNumber,
-        userName: order.user?.name || 'Unknown',
+        userName: Array.isArray(order.user)
+          ? order.user[0]?.name || 'Unknown'
+          : order.user?.name || 'Unknown',
         total: Number(order.total || 0),
         status: order.status,
       })),

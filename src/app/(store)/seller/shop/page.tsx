@@ -173,10 +173,15 @@ export default async function ShopDetailsPage() {
     redirect('/account')
   }
 
-  const { shop: shopFromAccess, canAccessShop } = await getSellerShopAccess(currentUser.id)
+  const { shop: shopFromAccess, canAccessShop, isOrderSlaBlocked } =
+    await getSellerShopAccess(currentUser.id)
 
   if (!shopFromAccess) {
     redirect('/seller/create-shop')
+  }
+
+  if (isOrderSlaBlocked) {
+    redirect('/seller/blocked')
   }
 
   if (!canAccessShop) {

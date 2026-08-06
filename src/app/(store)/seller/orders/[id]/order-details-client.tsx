@@ -237,7 +237,7 @@ export function SellerOrderDetailsClient({ order: initialOrder }: SellerOrderDet
             </Card>
           )}
 
-          {/* Seller actions: Only Mark as Shipped */}
+          {/* Seller actions: Process for shipment */}
           {!['CANCELLED', 'REFUNDED', 'DELIVERED', 'COMPLETED', 'SHIPPED'].includes(order.status) && (
             <Card>
               <CardContent className="p-6">
@@ -260,7 +260,7 @@ export function SellerOrderDetailsClient({ order: initialOrder }: SellerOrderDet
                         disabled={updating}
                         className="w-full"
                       >
-                        {updating ? 'Updating...' : 'Mark as Shipped'}
+                        {updating ? 'Updating...' : 'Process for shipment'}
                       </Button>
                       <p className="text-xs text-muted-foreground mt-2">
                         Shipping deducts the wholesale cost from your store balance. You need enough balance to ship. Only admins can mark orders as Delivered or Completed.

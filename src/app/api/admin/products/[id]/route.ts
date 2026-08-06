@@ -158,24 +158,76 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Delete product images first
-    await supabaseAdmin
-      .from('product_images')
-      .delete()
-      .eq('productId', params.id)
-
-    // Delete the product
-    const { error } = await supabaseAdmin
+    const { data: existing, error: lookupErr } = await supabaseAdmin
       .from('products')
-      .delete()
+      .select('id, name, shopId, status')
       .eq('id', params.id)
+      .maybeSingle()
 
-    if (error) {
-      throw error
+    if (lookupErr || !existing) {
+      return NextResponse.json({ error: 'Product not found' }, { status: 404 })
     }
 
-    revalidateStorefront(['home', 'products'])
-    return NextResponse.json({ success: true })
+    // Clear non-restrictive relations first (order_items use ON DELETE RESTRICT).
+    await Promise.all([
+      supabaseAdmin.from('product_images').delete().eq('productId', params.id),
+      supabaseAdmin.from('product_variants').delete().eq('productId', params.id),
+      supabaseAdmin.from('product_tags').delete().eq('productId', params.id),
+      supabaseAdmin.from('favorites').delete().eq('productId', params.id),
+      supabaseAdmin.from('cart_items').delete().eq('productId', params.id),
+      supabaseAdmin.from('reviews').delete().eq('productId', params.id),
+    ])
+
+    const { error } = await supabaseAdmin.from('products').delete().eq('id', params.id)
+
+    if (!error) {
+      revalidateStorefront(['home', 'products'])
+      return NextResponse.json({
+        success: true,
+        deleted: true,
+        shopId: existing.shopId,
+        message: existing.shopId
+          ? 'Product removed from merchant store.'
+          : 'Product deleted.',
+      })
+    }
+
+    // Referenced by orders — archive so it leaves the live storefront / merchant listings.
+    const code = (error as { code?: string }).code
+    const isFk =
+      code === '23503' ||
+      /foreign key|restrict|referenced/i.test(error.message || '')
+
+    if (isFk) {
+      const { error: archiveErr } = await supabaseAdmin
+        .from('products')
+        .update({
+          status: 'ARCHIVED',
+          isFeatured: false,
+          updatedAt: new Date().toISOString(),
+        })
+        .eq('id', params.id)
+
+      if (archiveErr) {
+        console.error('Error archiving product after delete failure:', archiveErr)
+        return NextResponse.json(
+          { error: 'Product is used in orders and could not be archived' },
+          { status: 500 }
+        )
+      }
+
+      revalidateStorefront(['home', 'products'])
+      return NextResponse.json({
+        success: true,
+        deleted: false,
+        archived: true,
+        shopId: existing.shopId,
+        message:
+          'Product appears in past orders, so it was archived instead of permanently deleted. It is no longer visible in the merchant store.',
+      })
+    }
+
+    throw error
   } catch (error) {
     console.error('Error deleting product:', error)
     return NextResponse.json({ error: 'Failed to delete product' }, { status: 500 })

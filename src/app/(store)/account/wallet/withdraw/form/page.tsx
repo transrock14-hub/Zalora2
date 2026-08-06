@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { getCurrentUser } from '@/lib/auth'
+import { getCurrentUser, getSellerShopAccess } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { WithdrawFormClient } from './withdraw-form-client'
 
@@ -20,6 +20,13 @@ export default async function WithdrawFormPage({
 }) {
   const currentUser = await getCurrentUser()
   if (!currentUser) return null
+
+  if (currentUser.canSell) {
+    const { isOrderSlaBlocked } = await getSellerShopAccess(currentUser.id)
+    if (isOrderSlaBlocked) {
+      redirect('/seller/blocked')
+    }
+  }
 
   const { method: methodId } = await searchParams
   const method = methodId ? METHOD_MAP[methodId.toLowerCase()] : null

@@ -24,6 +24,11 @@ const nextConfig = {
       { protocol: 'https', hostname: '**.shopify.com' },
       { protocol: 'https', hostname: '**.ssl.cf1.rackcdn.com' },
       { protocol: 'https', hostname: 's3.amazonaws.com' },
+      { protocol: 'https', hostname: 'dynamic.zacdn.com' },
+      { protocol: 'https', hostname: 'static-ph.zacdn.com' },
+      { protocol: 'https', hostname: 'f.nooncdn.com' },
+      { protocol: 'https', hostname: '**.zacdn.com' },
+      { protocol: 'https', hostname: '**.nooncdn.com' },
     ],
     // Hostinger's image optimizer often fails on brand CDNs that require
     // browser referrers (Smashbox/Clinique/etc.), which shows as broken

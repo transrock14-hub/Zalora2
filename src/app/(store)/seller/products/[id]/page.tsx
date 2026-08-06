@@ -97,8 +97,10 @@ export default async function SellerProductPage({
 
   if (!currentUser) return null
 
-  const { shop } = await getSellerShopAccess(currentUser.id)
+  const { shop, canAccessShop, isOrderSlaBlocked } = await getSellerShopAccess(currentUser.id)
   if (!shop) redirect('/seller/create-shop')
+  if (isOrderSlaBlocked) redirect('/seller/blocked')
+  if (!canAccessShop) redirect('/seller/verification-status')
 
   const isNew = params.id === 'new'
 

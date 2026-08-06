@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { optimizeProductImageUrl } from '@/lib/cdn-image'
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,7 +11,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ products: [] })
     }
 
-    // Search products by name, description, or shortDesc (no image join so we always get results)
+    const q = query.trim().replace(/[%_,]/g, ' ')
+
+    // Name/shortDesc only — description ILIKE is slow on large catalogs
     const { data: products, error } = await supabaseAdmin
       .from('products')
       .select(`
@@ -24,7 +27,7 @@ export async function GET(request: NextRequest) {
         )
       `)
       .eq('status', 'PUBLISHED')
-      .or(`name.ilike.%${query}%,description.ilike.%${query}%,shortDesc.ilike.%${query}%`)
+      .or(`name.ilike.%${q}%,shortDesc.ilike.%${q}%`)
       .order('totalSales', { ascending: false })
       .limit(10)
 
@@ -53,7 +56,7 @@ export async function GET(request: NextRequest) {
       slug: product.slug,
       price: Number(product.price),
       comparePrice: product.comparePrice ? Number(product.comparePrice) : null,
-      image: imageMap[product.id] || '/images/logo.png',
+      image: optimizeProductImageUrl(imageMap[product.id] || '/images/logo.png', 200),
       categoryName: product.category?.name || 'Uncategorized',
     }))
 

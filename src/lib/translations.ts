@@ -162,6 +162,10 @@ export const translations = {
     yourShopIs: 'Your shop is',
     pendingApprovalMessage: 'Your shop is pending approval. You can add products, but they won\'t be visible to customers until approved.',
     suspendedMessage: 'Your shop is currently suspended. Contact support for more information.',
+    merchantStoreBlocked: 'Merchant Store Blocked!',
+    orderSlaBlockedMessage:
+      'Merchant Store Blocked! An order was not processed within 24 hours. Only Top Up and Store Orders are available until the outstanding order has been processed.',
+    orderSlaBlockedMenuHint: 'Merchant Store Blocked!',
     totalProducts: 'Total Products',
     activeProducts: 'Active Products',
     totalOrders: 'Total Orders',

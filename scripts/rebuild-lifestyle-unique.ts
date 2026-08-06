@@ -40,9 +40,8 @@ const supabase = createClient(URL, KEY)
 
 const TARGET = 100
 const DJ_CATEGORIES = new Set([
-  'home-decoration',
-  'kitchen-accessories',
-  'furniture',
+  // Home & Garden owns these product photos — do not reuse here
+  // 'home-decoration', 'kitchen-accessories', 'furniture',
   'fragrances',
   'skin-care',
   'beauty',

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { Icon } from '@iconify/react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -110,11 +111,13 @@ export function AdminShopDetailsClient({
   recentOrders,
   verification,
 }: AdminShopDetailsClientProps) {
+  const router = useRouter()
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
   const [isKycUpdating, setIsKycUpdating] = useState(false)
+  const [deletingProductId, setDeletingProductId] = useState<string | null>(null)
   const [editData, setEditData] = useState({
     name: initialShop.name,
     slug: initialShop.slug,
@@ -129,6 +132,35 @@ export function AdminShopDetailsClient({
     orderCount: initialShop.orderCount.toString(),
     memberSince: initialShop.memberSince ?? '',
   })
+
+  const handleDeleteProduct = async (product: Product) => {
+    if (
+      !confirm(
+        `Delete "${product.name}" from this merchant store? This cannot be undone.`
+      )
+    ) {
+      return
+    }
+
+    setDeletingProductId(product.id)
+    try {
+      const res = await fetch(`/api/admin/products/${product.id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to delete product')
+        return
+      }
+      toast.success(data.message || (data.archived ? 'Product archived' : 'Product deleted'))
+      router.refresh()
+    } catch {
+      toast.error('Something went wrong')
+    } finally {
+      setDeletingProductId(null)
+    }
+  }
 
   const handleApproveKyc = async () => {
     if (!verification) return
@@ -465,29 +497,48 @@ export function AdminShopDetailsClient({
               <CardContent>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                   {products.map((product) => (
-                    <Link
+                    <div
                       key={product.id}
-                      href={`/admin/products/${product.id}`}
-                      className="group rounded-lg border border-border/60 p-3 hover:border-primary/40 hover:bg-muted/30 transition-colors"
+                      className="group relative rounded-lg border border-border/60 p-3 hover:border-primary/40 hover:bg-muted/30 transition-colors"
                     >
-                      <div className="aspect-square relative bg-muted/50 rounded-md overflow-hidden mb-2">
-                        {product.image ? (
-                          <Image
-                            src={product.image}
-                            alt={product.name}
-                            fill
-                            className="object-cover group-hover:scale-105 transition-transform"
-                            sizes="120px"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Icon icon="solar:box-linear" className="size-8 text-muted-foreground/40" />
-                          </div>
-                        )}
-                      </div>
-                      <p className="text-xs font-medium line-clamp-2">{product.name}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{formatPrice(product.price)}</p>
-                    </Link>
+                      <Link href={`/admin/products/${product.id}`} className="block">
+                        <div className="aspect-square relative bg-muted/50 rounded-md overflow-hidden mb-2">
+                          {product.image ? (
+                            <Image
+                              src={product.image}
+                              alt={product.name}
+                              fill
+                              className="object-cover group-hover:scale-105 transition-transform"
+                              sizes="120px"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Icon icon="solar:box-linear" className="size-8 text-muted-foreground/40" />
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-xs font-medium line-clamp-2">{product.name}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{formatPrice(product.price)}</p>
+                      </Link>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="secondary"
+                        className="absolute top-2 right-2 size-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                        disabled={deletingProductId === product.id}
+                        onClick={() => handleDeleteProduct(product)}
+                        title="Delete from merchant store"
+                      >
+                        <Icon
+                          icon={
+                            deletingProductId === product.id
+                              ? 'svg-spinners:ring-resize'
+                              : 'solar:trash-bin-trash-bold'
+                          }
+                          className="size-4 text-destructive"
+                        />
+                      </Button>
+                    </div>
                   ))}
                 </div>
               </CardContent>

@@ -1,4 +1,4 @@
-import { getCurrentUser } from '@/lib/auth'
+import { getCurrentUser, getSellerShopAccess } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { AccountClient } from './account-client'
 
@@ -21,7 +21,9 @@ async function getAccountData(userId: string) {
         shops (
           id,
           name,
-          status
+          status,
+          autoBlockedAt,
+          autoBlockReason
         )
       `)
       .eq('id', userId)
@@ -36,7 +38,13 @@ async function getAccountData(userId: string) {
   const user = userResult.data
   const userSellingEnabled = settingResult.data?.value === 'true'
   const rawShops = user?.shops
-  type ShopRow = { id: string; name?: string | null; status?: string | null }
+  type ShopRow = {
+    id: string
+    name?: string | null
+    status?: string | null
+    autoBlockedAt?: string | null
+    autoBlockReason?: string | null
+  }
   const shopRow: ShopRow | null =
     Array.isArray(rawShops) && rawShops.length > 0
       ? (rawShops[0] as ShopRow)
@@ -44,7 +52,13 @@ async function getAccountData(userId: string) {
         ? (rawShops as ShopRow)
         : null
   const shop = shopRow
-    ? { id: shopRow.id, name: shopRow.name ?? '', status: shopRow.status || 'PENDING' }
+    ? {
+        id: shopRow.id,
+        name: shopRow.name ?? '',
+        status: shopRow.status || 'PENDING',
+        autoBlockedAt: shopRow.autoBlockedAt ?? null,
+        autoBlockReason: shopRow.autoBlockReason ?? null,
+      }
     : null
   const shopId = shop?.id
 
@@ -84,6 +98,15 @@ async function getAccountData(userId: string) {
 export default async function AccountPage() {
   const currentUser = await getCurrentUser()
   if (!currentUser) return null
+
+  // Lazy SLA check so stores get blocked even if cron hasn't run yet.
+  if (currentUser.canSell) {
+    try {
+      await getSellerShopAccess(currentUser.id)
+    } catch (e) {
+      console.error('Account page SLA enforce error:', e)
+    }
+  }
 
   const data = await getAccountData(currentUser.id)
   if (!data.user) return null

@@ -39,7 +39,9 @@ interface SellerOrdersClientProps {
   page: number
   searchParams: {
     status?: string
+    blocked?: string
   }
+  isOrderSlaBlocked?: boolean
 }
 
 export function SellerOrdersClient({
@@ -48,9 +50,14 @@ export function SellerOrdersClient({
   pages,
   page,
   searchParams,
+  isOrderSlaBlocked = false,
 }: SellerOrdersClientProps) {
   const statusParam = searchParams?.status
   const statusValue = Array.isArray(statusParam) ? statusParam[0] : statusParam
+  const showBlockedBanner =
+    isOrderSlaBlocked ||
+    searchParams?.blocked === '1' ||
+    searchParams?.blocked === 'true'
 
   const tabs = [
     { value: 'pending', label: 'Pending' },
@@ -80,6 +87,28 @@ export function SellerOrdersClient({
             <span>Back</span>
           </Link>
         </div>
+
+        {showBlockedBanner && (
+          <Card className="border-destructive/30 bg-destructive/5">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <Icon icon="solar:lock-keyhole-bold" className="size-5 text-destructive shrink-0 mt-0.5" />
+                <div className="space-y-2">
+                  <p className="font-bold text-destructive text-lg">Merchant Store Blocked!</p>
+                  <p className="text-sm text-muted-foreground">
+                    This message remains until the outstanding order has been processed. Only Top Up and Store Orders are available. Mark pending orders as shipped to restore full access.
+                  </p>
+                  <Link
+                    href="/account/wallet/topup"
+                    className="inline-flex text-sm font-medium text-destructive underline underline-offset-2"
+                  >
+                    Go to Top Up
+                  </Link>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Status tabs: Pending, In Transit, Completed, Refunds */}
         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">

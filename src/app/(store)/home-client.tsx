@@ -4,7 +4,7 @@ import { Icon } from '@iconify/react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useUserStore, useCartStore } from '@/lib/store'
-import { HeroSlider } from '@/components/hero-slider'
+import { ZaloraHero, AnnouncementBar } from '@/components/zalora-hero'
 import { CategoryIcon } from '@/components/category-icon'
 import { ProductSlider } from '@/components/product-slider'
 import { ScrollingText } from '@/components/scrolling-text'
@@ -140,17 +140,20 @@ export function HomePageClient({
 
       {/* Main Content */}
       <div className="flex-1 mt-10 lg:mt-0 overflow-y-auto">
-        {/* Container for all sections - ensures alignment */}
-        <div className="container mx-auto px-4 lg:px-6 max-w-7xl py-4">
-          {/* Hero Slider - Mobile */}
-          <div className="lg:hidden rounded-lg overflow-hidden mb-4 shadow-sm border border-gray-200/60">
-            <HeroSlider slides={heroSlides} autoPlayInterval={4000} />
-          </div>
+        {/* Announcement strip (desktop) */}
+        <AnnouncementBar />
 
-          {/* Hero Slider - Desktop (single full-width image; no side banner) */}
-          <div className="hidden lg:block rounded-lg overflow-hidden mb-4 shadow-sm border border-gray-200/60 bg-white">
-            <HeroSlider slides={heroSlides} autoPlayInterval={4000} />
-          </div>
+        {/* Full-bleed editorial hero */}
+        <div className="mb-4">
+          <ZaloraHero
+            slides={heroSlides}
+            products={[...newArrivals, ...featuredProducts]}
+            autoPlayInterval={5000}
+          />
+        </div>
+
+        {/* Container for all sections - ensures alignment */}
+        <div className="container mx-auto px-4 lg:px-6 max-w-7xl py-2">
 
           {/* Categories Quick Links - Horizontal slider/scroller below Hero */}
           <div className="mb-4 bg-white border border-gray-200/60 rounded-lg p-4 shadow-sm">

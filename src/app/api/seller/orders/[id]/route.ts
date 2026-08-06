@@ -117,6 +117,16 @@ export async function PATCH(
 
     if (updateErr) throw updateErr
 
+    // Clear order-SLA auto-block once outstanding orders are processed.
+    if (status === 'SHIPPED' && shop.id) {
+      try {
+        const { tryUnblockShopAfterOrdersProcessed } = await import('@/lib/shop-order-sla')
+        await tryUnblockShopAfterOrdersProcessed(shop.id)
+      } catch (e) {
+        console.error('Order SLA unblock error', e)
+      }
+    }
+
     // Note: sourceProductId clearing happens in admin orders API when status is DELIVERED or COMPLETED
 
     if (status && order.userId) {

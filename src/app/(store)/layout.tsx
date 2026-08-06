@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { unstable_cache } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabase'
 import { Header } from '@/components/layout/header'
 import { StoreSidebar } from '@/components/layout/store-sidebar'
@@ -7,6 +8,8 @@ import { ChatWidget } from '@/components/layout/chat-widget'
 import { SearchModal } from '@/components/search-modal'
 import { AuthSync } from '@/components/auth-sync'
 import { StorePageTitleProvider } from '@/contexts/store-page-title-context'
+
+export const dynamic = 'force-dynamic'
 
 // Cache maintenance check - only check every 5 minutes
 let maintenanceCache: { value: boolean; timestamp: number } | null = null
@@ -43,13 +46,8 @@ async function checkMaintenance() {
   }
 }
 
-async function getCategories() {
-  // Skip DB check if Supabase env vars are not available (build time)
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return []
-  }
-  
-  try {
+const getCachedSidebarCategories = unstable_cache(
+  async () => {
     const { data: categories } = await supabaseAdmin
       .from('categories')
       .select('id, name, slug, icon, image')
@@ -59,6 +57,18 @@ async function getCategories() {
       .limit(15)
 
     return categories || []
+  },
+  ['store-sidebar-categories-v1'],
+  { revalidate: 60, tags: ['categories'] }
+)
+
+async function getCategories() {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return []
+  }
+
+  try {
+    return await getCachedSidebarCategories()
   } catch {
     return []
   }
@@ -120,4 +130,3 @@ export default async function StoreLayout({
   }
 }
 
-export const dynamic = 'force-dynamic'

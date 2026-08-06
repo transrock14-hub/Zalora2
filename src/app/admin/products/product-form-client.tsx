@@ -59,6 +59,7 @@ interface ProductFormClientProps {
 export function ProductFormClient({ product, categories, shops }: ProductFormClientProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [uploadingImages, setUploadingImages] = useState(false)
   const [formData, setFormData] = useState({
     name: product?.name || '',
@@ -116,6 +117,34 @@ export function ProductFormClient({ product, categories, shops }: ProductFormCli
       toast.error(error.message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!product) return
+    const shopLabel = shops.find((s) => s.id === product.shopId)?.name
+    const target = shopLabel
+      ? `this product from merchant store "${shopLabel}"`
+      : 'this product'
+    if (!confirm(`Delete ${target}? This cannot be undone.`)) return
+
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/admin/products/${product.id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to delete product')
+      }
+      toast.success(data.message || (data.archived ? 'Product archived' : 'Product deleted'))
+      router.push(product.shopId ? `/admin/products?shop=${product.shopId}` : '/admin/products')
+      router.refresh()
+    } catch (error: any) {
+      toast.error(error.message || 'Something went wrong')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -205,12 +234,26 @@ export function ProductFormClient({ product, categories, shops }: ProductFormCli
             {product ? `Editing: ${product.name}` : 'Create a new product'}
           </p>
         </div>
-        <Link href="/admin/products">
-          <Button variant="outline">
-            <Icon icon="solar:arrow-left-linear" className="mr-2 size-4" />
-            Back
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          {product && (
+            <Button
+              type="button"
+              variant="outline"
+              className="text-destructive border-destructive/30 hover:bg-destructive/10"
+              onClick={handleDelete}
+              disabled={deleting || loading}
+            >
+              <Icon icon="solar:trash-bin-trash-bold" className="mr-2 size-4" />
+              {deleting ? 'Deleting...' : 'Delete'}
+            </Button>
+          )}
+          <Link href={product?.shopId ? `/admin/products?shop=${product.shopId}` : '/admin/products'}>
+            <Button variant="outline">
+              <Icon icon="solar:arrow-left-linear" className="mr-2 size-4" />
+              Back
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
