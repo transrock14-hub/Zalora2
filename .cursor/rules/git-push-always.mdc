@@ -1,10 +1,15 @@
 ---
-description: Always push to GitHub after creating a commit
+description: Always commit and push every code edit to GitHub
 alwaysApply: true
 ---
 
-# Git: always push after commit
+# Git: always push every edit
 
-When the user asks to commit (or when creating a commit they requested), also **push to the remote** (`git push -u origin HEAD` if needed) unless they explicitly say not to push.
+After finishing any code or project file changes in this repo:
 
-Do not force-push to main/master. Do not skip hooks unless asked.
+1. **Commit** the relevant changes (follow the repo’s commit protocol / HEREDOC message style).
+2. **Push** immediately to `origin` (`git push -u origin HEAD` if upstream is missing).
+
+Do this by default for every edit session — do not wait for the user to ask “commit” or “push”, unless they explicitly say not to push or not to commit.
+
+Still never commit secrets (`.env*`, credentials), never force-push to main/master, and never skip hooks unless asked.
