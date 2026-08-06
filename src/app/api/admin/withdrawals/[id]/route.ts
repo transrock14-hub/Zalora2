@@ -17,9 +17,18 @@ export async function PATCH(
     const { id } = await params
     const body = await req.json()
     const { status } = body
+    const rejectionReason =
+      typeof body.rejectionReason === 'string' ? body.rejectionReason.trim() : ''
 
     if (!status || !['APPROVED', 'REJECTED'].includes(status)) {
       return NextResponse.json({ error: 'status must be APPROVED or REJECTED' }, { status: 400 })
+    }
+
+    if (status === 'REJECTED' && !rejectionReason) {
+      return NextResponse.json(
+        { error: 'Rejection reason is required' },
+        { status: 400 }
+      )
     }
 
     const { data: withdrawal, error: fetchErr } = await supabaseAdmin
@@ -58,18 +67,36 @@ export async function PATCH(
       await syncShopBalanceFromUser(withdrawal.userId)
     }
 
+    const updatePayload: Record<string, unknown> = {
+      status,
+      reviewedAt: new Date().toISOString(),
+      reviewedBy: session.userId,
+      updatedAt: new Date().toISOString(),
+    }
+    if (status === 'REJECTED') {
+      updatePayload.rejectionReason = rejectionReason
+    }
+
     const { data: updated, error: updateErr } = await supabaseAdmin
       .from('withdrawal_requests')
-      .update({
-        status,
-        reviewedAt: new Date().toISOString(),
-        reviewedBy: session.userId,
-      })
+      .update(updatePayload)
       .eq('id', id)
       .select()
       .single()
 
     if (updateErr) {
+      if (
+        (updateErr as { code?: string }).code === 'PGRST204' ||
+        updateErr.message?.includes('rejectionReason')
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              'rejectionReason column is missing. Run supabase-withdrawal-rejection-reason-migration.sql in Supabase SQL Editor.',
+          },
+          { status: 503 }
+        )
+      }
       return NextResponse.json({ error: updateErr.message }, { status: 500 })
     }
 
@@ -77,11 +104,14 @@ export async function PATCH(
       await createNotification({
         userId: withdrawal.userId,
         title: status === 'APPROVED' ? 'Withdrawal approved' : 'Withdrawal rejected',
-        message: status === 'APPROVED'
-          ? `Your withdrawal of ${Number(withdrawal.amount).toFixed(2)} has been approved.`
-          : 'Your withdrawal request was rejected.',
+        message:
+          status === 'APPROVED'
+            ? `Your withdrawal of ${Number(withdrawal.amount).toFixed(2)} has been approved.`
+            : `Your withdrawal request was rejected. Reason: ${rejectionReason}`,
         type: 'payment',
-        link: withdrawal.shopId ? '/seller/shop/wallet/withdrawal-record' : '/account/wallet/withdrawal-record',
+        link: withdrawal.shopId
+          ? '/seller/shop/wallet/withdrawal-record'
+          : '/account/wallet/withdrawal-record',
       })
     } catch (e) {
       console.error('Notification error:', e)

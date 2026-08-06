@@ -13,6 +13,7 @@ interface Withdrawal {
   address: string
   amount: number
   status: string
+  rejectionReason?: string | null
   createdAt: string
   reviewedAt: string | null
 }
@@ -97,7 +98,7 @@ export function WithdrawalRecordClient({ shopId, backHref = '/account/wallet/wit
                 <Card key={w.id}>
                   <CardContent className="p-4">
                     <div className="flex justify-between items-start gap-2">
-                      <div>
+                      <div className="min-w-0">
                         <p className="font-medium">{w.currency} {w.network ? `(${w.network})` : ''}</p>
                         <p className="text-sm text-muted-foreground mt-0.5" suppressHydrationWarning>
                           {Number(w.amount).toFixed(2)} · {formatDateTime(w.createdAt)}
@@ -110,6 +111,14 @@ export function WithdrawalRecordClient({ shopId, backHref = '/account/wallet/wit
                         {w.status}
                       </span>
                     </div>
+                    {w.status === 'REJECTED' && w.rejectionReason && (
+                      <div className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2">
+                        <p className="text-xs font-medium text-red-800">Rejection reason</p>
+                        <p className="text-sm text-red-700 mt-0.5 whitespace-pre-wrap">
+                          {w.rejectionReason}
+                        </p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}
