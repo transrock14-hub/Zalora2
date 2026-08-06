@@ -1,0 +1,42 @@
+index,name,price,image,source
+1,"Nike Air Jordan 1 Red And Black",305,https://cdn.dummyjson.com/product-images/mens-shoes/nike-air-jordan-1-red-and-black/1.webp,dj-88-f0
+2,"Nike Air Jordan 1 Red And Black Core",366.88,https://cdn.dummyjson.com/product-images/mens-shoes/nike-air-jordan-1-red-and-black/2.webp,dj-88-f1
+3,"Nike Air Jordan 1 Red And Black Pro",428.75,https://cdn.dummyjson.com/product-images/mens-shoes/nike-air-jordan-1-red-and-black/3.webp,dj-88-f2
+4,"Nike Air Jordan 1 Red And Black Street",490.63,https://cdn.dummyjson.com/product-images/mens-shoes/nike-air-jordan-1-red-and-black/4.webp,dj-88-f3
+5,"Nike Air Jordan 1 Red And Black Trail",552.5,https://cdn.dummyjson.com/product-images/mens-shoes/nike-air-jordan-1-red-and-black/thumbnail.webp,dj-88-f4
+6,"Nike Baseball Cleats",614.38,https://cdn.dummyjson.com/product-images/mens-shoes/nike-baseball-cleats/1.webp,dj-89-f0
+7,"Nike Baseball Cleats Core",676.25,https://cdn.dummyjson.com/product-images/mens-shoes/nike-baseball-cleats/2.webp,dj-89-f1
+8,"Nike Baseball Cleats Pro",738.13,https://cdn.dummyjson.com/product-images/mens-shoes/nike-baseball-cleats/3.webp,dj-89-f2
+9,"Nike Baseball Cleats Street",800,https://cdn.dummyjson.com/product-images/mens-shoes/nike-baseball-cleats/4.webp,dj-89-f3
+10,"Nike Baseball Cleats Trail",801,https://cdn.dummyjson.com/product-images/mens-shoes/nike-baseball-cleats/thumbnail.webp,dj-89-f4
+11,"Puma Future Rider Trainers",1043.71,https://cdn.dummyjson.com/product-images/mens-shoes/puma-future-rider-trainers/1.webp,dj-90-f0
+12,"Puma Future Rider Trainers Core",1286.44,https://cdn.dummyjson.com/product-images/mens-shoes/puma-future-rider-trainers/2.webp,dj-90-f1
+13,"Puma Future Rider Trainers Pro",1529.14,https://cdn.dummyjson.com/product-images/mens-shoes/puma-future-rider-trainers/3.webp,dj-90-f2
+14,"Puma Future Rider Trainers Street",1771.86,https://cdn.dummyjson.com/product-images/mens-shoes/puma-future-rider-trainers/4.webp,dj-90-f3
+15,"Puma Future Rider Trainers Trail",2014.57,https://cdn.dummyjson.com/product-images/mens-shoes/puma-future-rider-trainers/thumbnail.webp,dj-90-f4
+16,"Sports Sneakers Off White & Red",2257.3,https://cdn.dummyjson.com/product-images/mens-shoes/sports-sneakers-off-white-&-red/1.webp,dj-91-f0
+17,"Sports Sneakers Off White & Red Core",2500,https://cdn.dummyjson.com/product-images/mens-shoes/sports-sneakers-off-white-&-red/2.webp,dj-91-f1
+18,"Sports Sneakers Off White & Red Pro",2501,https://cdn.dummyjson.com/product-images/mens-shoes/sports-sneakers-off-white-&-red/3.webp,dj-91-f2
+19,"Sports Sneakers Off White & Red Street",2572.3,https://cdn.dummyjson.com/product-images/mens-shoes/sports-sneakers-off-white-&-red/4.webp,dj-91-f3
+20,"Sports Sneakers Off White & Red Trail",2643.58,https://cdn.dummyjson.com/product-images/mens-shoes/sports-sneakers-off-white-&-red/thumbnail.webp,dj-91-f4
+21,"Sports Sneakers Off White Red",2714.86,https://cdn.dummyjson.com/product-images/mens-shoes/sports-sneakers-off-white-red/1.webp,dj-92-f0
+22,"Sports Sneakers Off White Red Core",2786.14,https://cdn.dummyjson.com/product-images/mens-shoes/sports-sneakers-off-white-red/2.webp,dj-92-f1
+23,"Sports Sneakers Off White Red Pro",2857.43,https://cdn.dummyjson.com/product-images/mens-shoes/sports-sneakers-off-white-red/3.webp,dj-92-f2
+24,"Sports Sneakers Off White Red Street",2928.71,https://cdn.dummyjson.com/product-images/mens-shoes/sports-sneakers-off-white-red/4.webp,dj-92-f3
+25,"Sports Sneakers Off White Red Trail",3000,https://cdn.dummyjson.com/product-images/mens-shoes/sports-sneakers-off-white-red/thumbnail.webp,dj-92-f4
+26,"Futuristic Holographic Soccer Cleats",3001,https://i.imgur.com/qNOjJje.jpeg,esc-35-f0
+27,"Vibrant Runners: Bold Orange & Blue Sneakers",3143.71,https://i.imgur.com/hKcMNJs.jpeg,esc-38-f0
+28,"Vibrant Runners: Bold Orange & Blue Sneakers Core",3286.43,https://i.imgur.com/NYToymX.jpeg,esc-38-f1
+29,"Vibrant Runners: Bold Orange & Blue Sneakers Pro",3429.14,https://i.imgur.com/HiiapCt.jpeg,esc-38-f2
+30,"Vibrant Pink Classic Sneakers",3571.86,https://i.imgur.com/mcW42Gi.jpeg,esc-39-f0
+31,"Vibrant Pink Classic Sneakers Core",3714.58,https://i.imgur.com/mhn7qsF.jpeg,esc-39-f1
+32,"Vibrant Pink Classic Sneakers Pro",3857.29,https://i.imgur.com/F8vhnFJ.jpeg,esc-39-f2
+33,"Futuristic Silver and Gold High-Top Sneaker",4000,https://i.imgur.com/npLfCGq.jpeg,esc-40-f0
+34,"Futuristic Silver and Gold High-Top Sneaker Core",4001,https://i.imgur.com/vYim3gj.jpeg,esc-40-f1
+35,"Futuristic Silver and Gold High-Top Sneaker Pro",4143.71,https://i.imgur.com/HxuHwBO.jpeg,esc-40-f2
+36,"Elegant Purple Leather Loafers",4286.44,https://i.imgur.com/Au8J9sX.jpeg,esc-43-f0
+37,"Elegant Purple Leather Loafers Core",4429.14,https://i.imgur.com/gdr8BW2.jpeg,esc-43-f1
+38,"Elegant Purple Leather Loafers Pro",4571.86,https://i.imgur.com/KDCZxnJ.jpeg,esc-43-f2
+39,"Classic Blue Suede Casual Shoes",4714.57,https://i.imgur.com/sC0ztOB.jpeg,esc-44-f0
+40,"Classic Blue Suede Casual Shoes Core",4857.29,https://i.imgur.com/Jf9DL9R.jpeg,esc-44-f1
+41,"Classic Blue Suede Casual Shoes Pro",5000,https://i.imgur.com/R1IN95T.jpeg,esc-44-f2

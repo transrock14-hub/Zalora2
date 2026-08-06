@@ -1,0 +1,145 @@
+id,parent_id,name,slug,level,path,department
+1,,Women Fashion,women-fashion,1,Women Fashion,Women Fashion
+2,1,Dresses,women-fashion-dresses,2,Women Fashion > Dresses,Women Fashion
+3,1,Tops & Blouses,women-fashion-tops-blouses,2,Women Fashion > Tops & Blouses,Women Fashion
+4,1,Jeans & Denim,women-fashion-jeans-denim,2,Women Fashion > Jeans & Denim,Women Fashion
+5,1,Trousers,women-fashion-trousers,2,Women Fashion > Trousers,Women Fashion
+6,1,Skirts,women-fashion-skirts,2,Women Fashion > Skirts,Women Fashion
+7,1,Outerwear,women-fashion-outerwear,2,Women Fashion > Outerwear,Women Fashion
+8,1,Activewear,women-fashion-activewear,2,Women Fashion > Activewear,Women Fashion
+9,1,Lingerie,women-fashion-lingerie,2,Women Fashion > Lingerie,Women Fashion
+10,1,Swimwear,women-fashion-swimwear,2,Women Fashion > Swimwear,Women Fashion
+11,1,Plus Size,women-fashion-plus-size,2,Women Fashion > Plus Size,Women Fashion
+12,,Men Fashion,men-fashion,1,Men Fashion,Men Fashion
+13,12,Shirts,men-fashion-shirts,2,Men Fashion > Shirts,Men Fashion
+14,12,T-Shirts & Polos,men-fashion-t-shirts-polos,2,Men Fashion > T-Shirts & Polos,Men Fashion
+15,12,Jeans,men-fashion-jeans,2,Men Fashion > Jeans,Men Fashion
+16,12,Chinos & Trousers,men-fashion-chinos-trousers,2,Men Fashion > Chinos & Trousers,Men Fashion
+17,12,Jackets,men-fashion-jackets,2,Men Fashion > Jackets,Men Fashion
+18,12,Suits & Blazers,men-fashion-suits-blazers,2,Men Fashion > Suits & Blazers,Men Fashion
+19,12,Activewear,men-fashion-activewear,2,Men Fashion > Activewear,Men Fashion
+20,12,Underwear,men-fashion-underwear,2,Men Fashion > Underwear,Men Fashion
+21,12,Swimwear,men-fashion-swimwear,2,Men Fashion > Swimwear,Men Fashion
+22,12,Big & Tall,men-fashion-big-tall,2,Men Fashion > Big & Tall,Men Fashion
+23,,Kids & Baby,kids-baby,1,Kids & Baby,Kids & Baby
+24,23,Boys Clothing,kids-baby-boys-clothing,2,Kids & Baby > Boys Clothing,Kids & Baby
+25,23,Girls Clothing,kids-baby-girls-clothing,2,Kids & Baby > Girls Clothing,Kids & Baby
+26,23,Baby Essentials,kids-baby-baby-essentials,2,Kids & Baby > Baby Essentials,Kids & Baby
+27,23,Kids Footwear,kids-baby-kids-footwear,2,Kids & Baby > Kids Footwear,Kids & Baby
+28,23,School Uniforms,kids-baby-school-uniforms,2,Kids & Baby > School Uniforms,Kids & Baby
+29,23,Toys & Games,kids-baby-toys-games,2,Kids & Baby > Toys & Games,Kids & Baby
+30,23,Kids Accessories,kids-baby-kids-accessories,2,Kids & Baby > Kids Accessories,Kids & Baby
+31,,Shoes,shoes,1,Shoes,Shoes
+32,31,Women Sneakers,shoes-women-sneakers,2,Shoes > Women Sneakers,Shoes
+33,31,Women Heels,shoes-women-heels,2,Shoes > Women Heels,Shoes
+34,31,Women Boots,shoes-women-boots,2,Shoes > Women Boots,Shoes
+35,31,Men Sneakers,shoes-men-sneakers,2,Shoes > Men Sneakers,Shoes
+36,31,Men Formal Shoes,shoes-men-formal-shoes,2,Shoes > Men Formal Shoes,Shoes
+37,31,Men Boots,shoes-men-boots,2,Shoes > Men Boots,Shoes
+38,31,Kids Shoes,shoes-kids-shoes,2,Shoes > Kids Shoes,Shoes
+39,31,Sandals & Flip Flops,shoes-sandals-flip-flops,2,Shoes > Sandals & Flip Flops,Shoes
+40,31,Sports Shoes,shoes-sports-shoes,2,Shoes > Sports Shoes,Shoes
+41,,Bags & Accessories,bags-accessories,1,Bags & Accessories,Bags & Accessories
+42,41,Handbags,bags-accessories-handbags,2,Bags & Accessories > Handbags,Bags & Accessories
+43,41,Backpacks,bags-accessories-backpacks,2,Bags & Accessories > Backpacks,Bags & Accessories
+44,41,Wallets,bags-accessories-wallets,2,Bags & Accessories > Wallets,Bags & Accessories
+45,41,Belts,bags-accessories-belts,2,Bags & Accessories > Belts,Bags & Accessories
+46,41,Hats & Caps,bags-accessories-hats-caps,2,Bags & Accessories > Hats & Caps,Bags & Accessories
+47,41,Scarves,bags-accessories-scarves,2,Bags & Accessories > Scarves,Bags & Accessories
+48,41,Sunglasses,bags-accessories-sunglasses,2,Bags & Accessories > Sunglasses,Bags & Accessories
+49,41,Watches,bags-accessories-watches,2,Bags & Accessories > Watches,Bags & Accessories
+50,41,Jewellery,bags-accessories-jewellery,2,Bags & Accessories > Jewellery,Bags & Accessories
+51,41,Luggage,bags-accessories-luggage,2,Bags & Accessories > Luggage,Bags & Accessories
+52,,Beauty & Personal Care,beauty-personal-care,1,Beauty & Personal Care,Beauty & Personal Care
+53,52,Skincare,beauty-personal-care-skincare,2,Beauty & Personal Care > Skincare,Beauty & Personal Care
+54,52,Makeup,beauty-personal-care-makeup,2,Beauty & Personal Care > Makeup,Beauty & Personal Care
+55,52,Hair Care,beauty-personal-care-hair-care,2,Beauty & Personal Care > Hair Care,Beauty & Personal Care
+56,52,Fragrance,beauty-personal-care-fragrance,2,Beauty & Personal Care > Fragrance,Beauty & Personal Care
+57,52,Men Grooming,beauty-personal-care-men-grooming,2,Beauty & Personal Care > Men Grooming,Beauty & Personal Care
+58,52,Bath & Body,beauty-personal-care-bath-body,2,Beauty & Personal Care > Bath & Body,Beauty & Personal Care
+59,52,Nail Care,beauty-personal-care-nail-care,2,Beauty & Personal Care > Nail Care,Beauty & Personal Care
+60,52,Oral Care,beauty-personal-care-oral-care,2,Beauty & Personal Care > Oral Care,Beauty & Personal Care
+61,52,Tools & Brushes,beauty-personal-care-tools-brushes,2,Beauty & Personal Care > Tools & Brushes,Beauty & Personal Care
+62,,Electronics,electronics,1,Electronics,Electronics
+63,62,Smartphones & Accessories,electronics-smartphones-accessories,2,Electronics > Smartphones & Accessories,Electronics
+64,62,Laptops & Tablets,electronics-laptops-tablets,2,Electronics > Laptops & Tablets,Electronics
+65,62,Audio & Headphones,electronics-audio-headphones,2,Electronics > Audio & Headphones,Electronics
+66,62,Cameras,electronics-cameras,2,Electronics > Cameras,Electronics
+67,62,Wearables,electronics-wearables,2,Electronics > Wearables,Electronics
+68,62,Smart Home,electronics-smart-home,2,Electronics > Smart Home,Electronics
+69,62,Gaming,electronics-gaming,2,Electronics > Gaming,Electronics
+70,62,Computer Peripherals,electronics-computer-peripherals,2,Electronics > Computer Peripherals,Electronics
+71,62,Power Banks & Chargers,electronics-power-banks-chargers,2,Electronics > Power Banks & Chargers,Electronics
+72,62,TV & Streaming,electronics-tv-streaming,2,Electronics > TV & Streaming,Electronics
+73,,Home & Living,home-living,1,Home & Living,Home & Living
+74,73,Furniture,home-living-furniture,2,Home & Living > Furniture,Home & Living
+75,73,Bedding,home-living-bedding,2,Home & Living > Bedding,Home & Living
+76,73,Bath,home-living-bath,2,Home & Living > Bath,Home & Living
+77,73,Kitchenware,home-living-kitchenware,2,Home & Living > Kitchenware,Home & Living
+78,73,Cookware,home-living-cookware,2,Home & Living > Cookware,Home & Living
+79,73,Home Decor,home-living-home-decor,2,Home & Living > Home Decor,Home & Living
+80,73,Lighting,home-living-lighting,2,Home & Living > Lighting,Home & Living
+81,73,Storage & Organisation,home-living-storage-organisation,2,Home & Living > Storage & Organisation,Home & Living
+82,73,Curtains & Rugs,home-living-curtains-rugs,2,Home & Living > Curtains & Rugs,Home & Living
+83,73,Cleaning Supplies,home-living-cleaning-supplies,2,Home & Living > Cleaning Supplies,Home & Living
+84,,Sports & Outdoors,sports-outdoors,1,Sports & Outdoors,Sports & Outdoors
+85,84,Fitness Equipment,sports-outdoors-fitness-equipment,2,Sports & Outdoors > Fitness Equipment,Sports & Outdoors
+86,84,Running,sports-outdoors-running,2,Sports & Outdoors > Running,Sports & Outdoors
+87,84,Team Sports,sports-outdoors-team-sports,2,Sports & Outdoors > Team Sports,Sports & Outdoors
+88,84,Yoga & Pilates,sports-outdoors-yoga-pilates,2,Sports & Outdoors > Yoga & Pilates,Sports & Outdoors
+89,84,Cycling,sports-outdoors-cycling,2,Sports & Outdoors > Cycling,Sports & Outdoors
+90,84,Camping & Hiking,sports-outdoors-camping-hiking,2,Sports & Outdoors > Camping & Hiking,Sports & Outdoors
+91,84,Swimming,sports-outdoors-swimming,2,Sports & Outdoors > Swimming,Sports & Outdoors
+92,84,Sports Nutrition,sports-outdoors-sports-nutrition,2,Sports & Outdoors > Sports Nutrition,Sports & Outdoors
+93,84,Outdoor Apparel,sports-outdoors-outdoor-apparel,2,Sports & Outdoors > Outdoor Apparel,Sports & Outdoors
+94,,Health & Wellness,health-wellness,1,Health & Wellness,Health & Wellness
+95,94,Vitamins & Supplements,health-wellness-vitamins-supplements,2,Health & Wellness > Vitamins & Supplements,Health & Wellness
+96,94,Medical Devices,health-wellness-medical-devices,2,Health & Wellness > Medical Devices,Health & Wellness
+97,94,First Aid,health-wellness-first-aid,2,Health & Wellness > First Aid,Health & Wellness
+98,94,Massage & Relaxation,health-wellness-massage-relaxation,2,Health & Wellness > Massage & Relaxation,Health & Wellness
+99,94,Sleep & Wellness,health-wellness-sleep-wellness,2,Health & Wellness > Sleep & Wellness,Health & Wellness
+100,94,Healthcare Essentials,health-wellness-healthcare-essentials,2,Health & Wellness > Healthcare Essentials,Health & Wellness
+101,,Food & Grocery,food-grocery,1,Food & Grocery,Food & Grocery
+102,101,Pantry Staples,food-grocery-pantry-staples,2,Food & Grocery > Pantry Staples,Food & Grocery
+103,101,Snacks & Confectionery,food-grocery-snacks-confectionery,2,Food & Grocery > Snacks & Confectionery,Food & Grocery
+104,101,Beverages,food-grocery-beverages,2,Food & Grocery > Beverages,Food & Grocery
+105,101,Organic & Health Foods,food-grocery-organic-health-foods,2,Food & Grocery > Organic & Health Foods,Food & Grocery
+106,101,Coffee & Tea,food-grocery-coffee-tea,2,Food & Grocery > Coffee & Tea,Food & Grocery
+107,101,Instant Meals,food-grocery-instant-meals,2,Food & Grocery > Instant Meals,Food & Grocery
+108,101,Baking Supplies,food-grocery-baking-supplies,2,Food & Grocery > Baking Supplies,Food & Grocery
+109,,Pet Supplies,pet-supplies,1,Pet Supplies,Pet Supplies
+110,109,Dog Food & Treats,pet-supplies-dog-food-treats,2,Pet Supplies > Dog Food & Treats,Pet Supplies
+111,109,Cat Food & Treats,pet-supplies-cat-food-treats,2,Pet Supplies > Cat Food & Treats,Pet Supplies
+112,109,Pet Toys,pet-supplies-pet-toys,2,Pet Supplies > Pet Toys,Pet Supplies
+113,109,Pet Grooming,pet-supplies-pet-grooming,2,Pet Supplies > Pet Grooming,Pet Supplies
+114,109,Pet Beds & Housing,pet-supplies-pet-beds-housing,2,Pet Supplies > Pet Beds & Housing,Pet Supplies
+115,109,Pet Accessories,pet-supplies-pet-accessories,2,Pet Supplies > Pet Accessories,Pet Supplies
+116,,Automotive,automotive,1,Automotive,Automotive
+117,116,Car Accessories,automotive-car-accessories,2,Automotive > Car Accessories,Automotive
+118,116,Car Care,automotive-car-care,2,Automotive > Car Care,Automotive
+119,116,Motorcycle Gear,automotive-motorcycle-gear,2,Automotive > Motorcycle Gear,Automotive
+120,116,Oils & Fluids,automotive-oils-fluids,2,Automotive > Oils & Fluids,Automotive
+121,116,Tools & Equipment,automotive-tools-equipment,2,Automotive > Tools & Equipment,Automotive
+122,116,Interior Accessories,automotive-interior-accessories,2,Automotive > Interior Accessories,Automotive
+123,,Books & Stationery,books-stationery,1,Books & Stationery,Books & Stationery
+124,123,Fiction,books-stationery-fiction,2,Books & Stationery > Fiction,Books & Stationery
+125,123,Non-Fiction,books-stationery-non-fiction,2,Books & Stationery > Non-Fiction,Books & Stationery
+126,123,Children Books,books-stationery-children-books,2,Books & Stationery > Children Books,Books & Stationery
+127,123,Notebooks & Journals,books-stationery-notebooks-journals,2,Books & Stationery > Notebooks & Journals,Books & Stationery
+128,123,Office Supplies,books-stationery-office-supplies,2,Books & Stationery > Office Supplies,Books & Stationery
+129,123,Art & Craft Supplies,books-stationery-art-craft-supplies,2,Books & Stationery > Art & Craft Supplies,Books & Stationery
+130,123,Planners & Diaries,books-stationery-planners-diaries,2,Books & Stationery > Planners & Diaries,Books & Stationery
+131,,Garden & DIY,garden-diy,1,Garden & DIY,Garden & DIY
+132,131,Garden Tools,garden-diy-garden-tools,2,Garden & DIY > Garden Tools,Garden & DIY
+133,131,Plants & Seeds,garden-diy-plants-seeds,2,Garden & DIY > Plants & Seeds,Garden & DIY
+134,131,Outdoor Furniture,garden-diy-outdoor-furniture,2,Garden & DIY > Outdoor Furniture,Garden & DIY
+135,131,Power Tools,garden-diy-power-tools,2,Garden & DIY > Power Tools,Garden & DIY
+136,131,Hand Tools,garden-diy-hand-tools,2,Garden & DIY > Hand Tools,Garden & DIY
+137,131,Paint & Hardware,garden-diy-paint-hardware,2,Garden & DIY > Paint & Hardware,Garden & DIY
+138,131,BBQ & Outdoor Cooking,garden-diy-bbq-outdoor-cooking,2,Garden & DIY > BBQ & Outdoor Cooking,Garden & DIY
+139,,Office & Business,office-business,1,Office & Business,Office & Business
+140,139,Desks & Chairs,office-business-desks-chairs,2,Office & Business > Desks & Chairs,Office & Business
+141,139,Printers & Ink,office-business-printers-ink,2,Office & Business > Printers & Ink,Office & Business
+142,139,Filing & Storage,office-business-filing-storage,2,Office & Business > Filing & Storage,Office & Business
+143,139,Presentation Tools,office-business-presentation-tools,2,Office & Business > Presentation Tools,Office & Business
+144,139,Business Electronics,office-business-business-electronics,2,Office & Business > Business Electronics,Office & Business

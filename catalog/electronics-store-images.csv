@@ -1,0 +1,41 @@
+index,name,price,image,source
+1,"Apple iPhone Charger",366.88,https://cdn.dummyjson.com/product-images/mobile-accessories/apple-iphone-charger/1.webp,dj-104
+2,"Apple MacBook Pro 14 Inch Space Grey",428.75,https://cdn.dummyjson.com/product-images/laptops/apple-macbook-pro-14-inch-space-grey/1.webp,dj-78
+3,"Asus Zenbook Pro Dual Screen Laptop",490.63,https://cdn.dummyjson.com/product-images/laptops/asus-zenbook-pro-dual-screen-laptop/1.webp,dj-79
+4,"iPad Mini 2021 Starlight",552.5,https://cdn.dummyjson.com/product-images/tablets/ipad-mini-2021-starlight/1.webp,dj-159
+5,"iPhone 13 Pro",614.38,https://cdn.dummyjson.com/product-images/smartphones/iphone-13-pro/1.webp,dj-123
+6,"iPhone 17 Pro Max",676.25,https://cdsassets.apple.com/live/7WUAS350/images/tech-specs/iphone-17-pro-17-pro-max-hero.png,esc-87
+7,"iPhone 5s",738.13,https://cdn.dummyjson.com/product-images/smartphones/iphone-5s/1.webp,dj-121
+8,"iPhone 6",800,https://cdn.dummyjson.com/product-images/smartphones/iphone-6/1.webp,dj-122
+9,"iPhone X",801,https://cdn.dummyjson.com/product-images/smartphones/iphone-x/1.webp,dj-124
+10,"New DELL XPS 13 9300 Laptop",1043.71,https://cdn.dummyjson.com/product-images/laptops/new-dell-xps-13-9300-laptop/1.webp,dj-82
+11,"Oppo A57",1286.44,https://cdn.dummyjson.com/product-images/smartphones/oppo-a57/1.webp,dj-125
+12,"Oppo F19 Pro Plus",1529.14,https://cdn.dummyjson.com/product-images/smartphones/oppo-f19-pro-plus/1.webp,dj-126
+13,"Oppo K1",1771.86,https://cdn.dummyjson.com/product-images/smartphones/oppo-k1/1.webp,dj-127
+14,"Samsung 49-Inch CHG90 144Hz Curved Gaming Monitor (LC49HG90DMNXZA) – Super Ultrawide Screen QLED",2014.57,https://fakestoreapi.com/img/81Zt42ioCgL._AC_SX679_t.png,fs-14
+15,"Samsung Galaxy S10",2257.3,https://cdn.dummyjson.com/product-images/smartphones/samsung-galaxy-s10/1.webp,dj-133
+16,"Samsung Galaxy S7",2500,https://cdn.dummyjson.com/product-images/smartphones/samsung-galaxy-s7/1.webp,dj-131
+17,"Samsung Galaxy S8",2501,https://cdn.dummyjson.com/product-images/smartphones/samsung-galaxy-s8/1.webp,dj-132
+18,"Samsung Galaxy Tab S8 Plus Grey",2572.3,https://cdn.dummyjson.com/product-images/tablets/samsung-galaxy-tab-s8-plus-grey/1.webp,dj-160
+19,"Samsung Galaxy Tab White",2643.58,https://cdn.dummyjson.com/product-images/tablets/samsung-galaxy-tab-white/1.webp,dj-161
+20,"Selfie Lamp with iPhone",2714.86,https://cdn.dummyjson.com/product-images/mobile-accessories/selfie-lamp-with-iphone/1.webp,dj-110
+21,"Vivo S1",2786.14,https://cdn.dummyjson.com/product-images/smartphones/vivo-s1/1.webp,dj-134
+22,"Vivo V9",2857.43,https://cdn.dummyjson.com/product-images/smartphones/vivo-v9/1.webp,dj-135
+23,"Vivo X21",2928.71,https://cdn.dummyjson.com/product-images/smartphones/vivo-x21/1.webp,dj-136
+24,"Acer SB220Q bi 21.5 inches Full HD (1920 x 1080) IPS Ultra-Thin",3000,https://fakestoreapi.com/img/81QpkIctqPL._AC_SX679_t.png,fs-13
+25,"SanDisk SSD PLUS 1TB Internal SSD - SATA III 6 Gb/s",3001,https://fakestoreapi.com/img/61U7T1koQqL._AC_SX679_t.png,fs-10
+26,"Silicon Power 256GB SSD 3D NAND A55 SLC Cache Performance Boost SATA III 2.5",3143.71,https://fakestoreapi.com/img/71kWymZ+c+L._AC_SX679_t.png,fs-11
+27,"WD 2TB Elements Portable External Hard Drive - USB 3.0",3286.43,https://fakestoreapi.com/img/61IBBVJvSDL._AC_SY879_t.png,fs-9
+28,"WD 4TB Gaming Drive Works with Playstation 4 Portable External Hard Drive",3429.14,https://fakestoreapi.com/img/61mtL65D4cL._AC_SX679_t.png,fs-12
+29,"Amazon Echo Plus",3571.86,https://cdn.dummyjson.com/product-images/mobile-accessories/amazon-echo-plus/1.webp,dj-99
+30,"Apple HomePod Mini Cosmic Grey",3714.58,https://cdn.dummyjson.com/product-images/mobile-accessories/apple-homepod-mini-cosmic-grey/1.webp,dj-103
+31,"Apple Airpower Wireless Charger",3857.29,https://cdn.dummyjson.com/product-images/mobile-accessories/apple-airpower-wireless-charger/1.webp,dj-102
+32,"Apple Phone Case",4000,https://i.imgur.com/yb9UQKL.jpeg,esc-26
+33,"Huawei Matebook X Pro",4001,https://cdn.dummyjson.com/product-images/laptops/huawei-matebook-x-pro/1.webp,dj-80
+34,"Lenovo Yoga 920",4143.71,https://cdn.dummyjson.com/product-images/laptops/lenovo-yoga-920/1.webp,dj-81
+35,"Monopod",4286.44,https://cdn.dummyjson.com/product-images/mobile-accessories/monopod/1.webp,dj-109
+36,"Realme C35",4429.14,https://cdn.dummyjson.com/product-images/smartphones/realme-c35/1.webp,dj-128
+37,"Realme X",4571.86,https://cdn.dummyjson.com/product-images/smartphones/realme-x/1.webp,dj-129
+38,"Realme XT",4714.57,https://cdn.dummyjson.com/product-images/smartphones/realme-xt/1.webp,dj-130
+39,"Selfie Stick Monopod",4857.29,https://cdn.dummyjson.com/product-images/mobile-accessories/selfie-stick-monopod/1.webp,dj-111
+40,"TV Studio Camera Pedestal",5000,https://cdn.dummyjson.com/product-images/mobile-accessories/tv-studio-camera-pedestal/1.webp,dj-112

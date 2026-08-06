@@ -1,0 +1,23 @@
+index,name,price,image
+1,"American Football",305,https://cdn.dummyjson.com/product-images/sports-accessories/american-football/1.webp
+2,"Baseball Ball",428.75,https://cdn.dummyjson.com/product-images/sports-accessories/baseball-ball/1.webp
+3,"Baseball Glove",552.5,https://cdn.dummyjson.com/product-images/sports-accessories/baseball-glove/1.webp
+4,"Basketball",676.25,https://cdn.dummyjson.com/product-images/sports-accessories/basketball/1.webp
+5,"Basketball Rim",800,https://cdn.dummyjson.com/product-images/sports-accessories/basketball-rim/1.webp
+6,"Cricket Ball",801,https://cdn.dummyjson.com/product-images/sports-accessories/cricket-ball/1.webp
+7,"Cricket Bat",1225.75,https://cdn.dummyjson.com/product-images/sports-accessories/cricket-bat/1.webp
+8,"Cricket Helmet",1650.5,https://cdn.dummyjson.com/product-images/sports-accessories/cricket-helmet/1.webp
+9,"Cricket Wicket",2075.26,https://cdn.dummyjson.com/product-images/sports-accessories/cricket-wicket/1.webp
+10,"Feather Shuttlecock",2500,https://cdn.dummyjson.com/product-images/sports-accessories/feather-shuttlecock/1.webp
+11,"Football",2501,https://cdn.dummyjson.com/product-images/sports-accessories/football/1.webp
+12,"Golf Ball",2667.34,https://cdn.dummyjson.com/product-images/sports-accessories/golf-ball/1.webp
+13,"Iron Golf",2833.67,https://cdn.dummyjson.com/product-images/sports-accessories/iron-golf/1.webp
+14,"Metal Baseball Bat",3000,https://cdn.dummyjson.com/product-images/sports-accessories/metal-baseball-bat/1.webp
+15,"Tennis Ball",3001,https://cdn.dummyjson.com/product-images/sports-accessories/tennis-ball/1.webp
+16,"Tennis Racket",3334,https://cdn.dummyjson.com/product-images/sports-accessories/tennis-racket/1.webp
+17,"Volleyball",3667,https://cdn.dummyjson.com/product-images/sports-accessories/volleyball/1.webp
+18,"Generic Motorcycle",4000,https://cdn.dummyjson.com/product-images/motorcycle/generic-motorcycle/1.webp
+19,"Kawasaki Z800",4001,https://cdn.dummyjson.com/product-images/motorcycle/kawasaki-z800/1.webp
+20,"MotoGP CI.H1",4334,https://cdn.dummyjson.com/product-images/motorcycle/motogp-ci.h1/1.webp
+21,"Scooter Motorcycle",4667,https://cdn.dummyjson.com/product-images/motorcycle/scooter-motorcycle/1.webp
+22,"Sportbike Motorcycle",5000,https://cdn.dummyjson.com/product-images/motorcycle/sportbike-motorcycle/1.webp

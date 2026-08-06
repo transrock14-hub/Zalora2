@@ -1,0 +1,48 @@
+index,name,price,image,source
+1,"Apple Smartwatch",470,https://i.imgur.com/LGk9Jn2.jpeg,esc-27
+2,"Apple Watch Series 4 Gold",525,https://cdn.dummyjson.com/product-images/mobile-accessories/apple-watch-series-4-gold/1.webp,dj-106
+3,"Brown Leather Belt Watch",580,https://cdn.dummyjson.com/product-images/mens-watches/brown-leather-belt-watch/1.webp,dj-93
+4,"IWC Ingenieur Automatic Steel",635,https://cdn.dummyjson.com/product-images/womens-watches/iwc-ingenieur-automatic-steel/1.webp,dj-190
+5,"Longines Master Collection",690,https://cdn.dummyjson.com/product-images/mens-watches/longines-master-collection/1.webp,dj-94
+6,"Rolex Cellini Date Black Dial",745,https://cdn.dummyjson.com/product-images/mens-watches/rolex-cellini-date-black-dial/1.webp,dj-95
+7,"Rolex Cellini Moonphase",800,https://cdn.dummyjson.com/product-images/mens-watches/rolex-cellini-moonphase/1.webp,dj-96
+8,"Rolex Datejust",801,https://cdn.dummyjson.com/product-images/mens-watches/rolex-datejust/1.webp,dj-97
+9,"Rolex Datejust Women",989.78,https://cdn.dummyjson.com/product-images/womens-watches/rolex-datejust-women/1.webp,dj-192
+10,"Rolex Submariner Watch",1178.56,https://cdn.dummyjson.com/product-images/mens-watches/rolex-submariner-watch/1.webp,dj-98
+11,"Watch Gold for Women",1367.33,https://cdn.dummyjson.com/product-images/womens-watches/watch-gold-for-women/1.webp,dj-193
+12,"Women's Wrist Watch",1556.11,https://cdn.dummyjson.com/product-images/womens-watches/women's-wrist-watch/1.webp,dj-194
+13,"Green Crystal Earring",1744.9,https://cdn.dummyjson.com/product-images/womens-jewellery/green-crystal-earring/1.webp,dj-182
+14,"Green Oval Earring",1933.67,https://cdn.dummyjson.com/product-images/womens-jewellery/green-oval-earring/1.webp,dj-183
+15,"John Hardy Women's Legends Naga Gold & Silver Dragon Station Chain Bracelet",2122.44,https://fakestoreapi.com/img/71pWzhdJNwL._AC_UL640_QL65_ML3_t.png,fs-5
+16,"Pierced Owl Rose Gold Plated Stainless Steel Double",2311.22,https://fakestoreapi.com/img/51UDEzMJVpL._AC_UL640_QL65_ML3_t.png,fs-8
+17,"Solid Gold Petite Micropave",2500,https://fakestoreapi.com/img/61sbMiUnoGL._AC_UL640_QL65_ML3_t.png,fs-6
+18,"Tropical Earring",2501,https://cdn.dummyjson.com/product-images/womens-jewellery/tropical-earring/1.webp,dj-184
+19,"White Gold Plated Princess",2556.44,https://fakestoreapi.com/img/71YAIFU48IL._AC_UL640_QL65_ML3_t.png,fs-7
+20,"Black Sun Glasses",2611.88,https://cdn.dummyjson.com/product-images/sunglasses/black-sun-glasses/1.webp,dj-154
+21,"Classic Sun Glasses",2667.34,https://cdn.dummyjson.com/product-images/sunglasses/classic-sun-glasses/1.webp,dj-155
+22,"Green and Black Glasses",2722.78,https://cdn.dummyjson.com/product-images/sunglasses/green-and-black-glasses/1.webp,dj-156
+23,"Party Glasses",2778.22,https://cdn.dummyjson.com/product-images/sunglasses/party-glasses/1.webp,dj-157
+24,"Sunglasses",2833.67,https://cdn.dummyjson.com/product-images/sunglasses/sunglasses/1.webp,dj-158
+25,"Trendy Pink-Tinted Sunglasses",2889.11,https://i.imgur.com/0qQBkxX.jpg,esc-50
+26,"Blue Women's Handbag",2944.56,https://cdn.dummyjson.com/product-images/womens-bags/blue-women's-handbag/1.webp,dj-172
+27,"Chic Transparent Fashion Handbag",3000,https://i.imgur.com/Lqaqz59.jpg,esc-49
+28,"Heshe Women's Leather Bag",3001,https://cdn.dummyjson.com/product-images/womens-bags/heshe-women's-leather-bag/1.webp,dj-173
+29,"Prada Women Bag",3112,https://cdn.dummyjson.com/product-images/womens-bags/prada-women-bag/1.webp,dj-174
+30,"Sleek Olive Green Hardshell Carry-On Luggage",3223,https://i.imgur.com/jVfoZnP.jpg,esc-48
+31,"Women Handbag Black",3334,https://cdn.dummyjson.com/product-images/womens-bags/women-handbag-black/1.webp,dj-176
+32,"Calvin Klein CK One",3445,https://cdn.dummyjson.com/product-images/fragrances/calvin-klein-ck-one/1.webp,dj-6
+33,"Chanel Coco Noir Eau De",3556,https://cdn.dummyjson.com/product-images/fragrances/chanel-coco-noir-eau-de/1.webp,dj-7
+34,"Dior J'adore",3667,https://cdn.dummyjson.com/product-images/fragrances/dior-j'adore/1.webp,dj-8
+35,"Radiant Citrus Eau de Parfum",3778,https://i.imgur.com/xPDwUb3.jpg,esc-47
+36,"Attitude Super Leaves Hand Soap",3889,https://cdn.dummyjson.com/product-images/skin-care/attitude-super-leaves-hand-soap/1.webp,dj-118
+37,"Essence Mascara Lash Princess",4000,https://cdn.dummyjson.com/product-images/beauty/essence-mascara-lash-princess/1.webp,dj-1
+38,"Eyeshadow Palette with Mirror",4001,https://cdn.dummyjson.com/product-images/beauty/eyeshadow-palette-with-mirror/1.webp,dj-2
+39,"Olay Ultra Moisture Shea Butter Body Wash",4112,https://cdn.dummyjson.com/product-images/skin-care/olay-ultra-moisture-shea-butter-body-wash/1.webp,dj-119
+40,"Powder Canister",4223,https://cdn.dummyjson.com/product-images/beauty/powder-canister/1.webp,dj-3
+41,"Vaseline Men Body and Face Lotion",4334,https://cdn.dummyjson.com/product-images/skin-care/vaseline-men-body-and-face-lotion/1.webp,dj-120
+42,"Apple Airpods",4445,https://cdn.dummyjson.com/product-images/mobile-accessories/apple-airpods/1.webp,dj-100
+43,"Apple AirPods Max Silver",4556,https://cdn.dummyjson.com/product-images/mobile-accessories/apple-airpods-max-silver/1.webp,dj-101
+44,"Apple MagSafe Battery Pack",4667,https://cdn.dummyjson.com/product-images/mobile-accessories/apple-magsafe-battery-pack/1.webp,dj-105
+45,"Beats Flex Wireless Earphones",4778,https://cdn.dummyjson.com/product-images/mobile-accessories/beats-flex-wireless-earphones/1.webp,dj-107
+46,"Dolce Shine Eau de",4889,https://cdn.dummyjson.com/product-images/fragrances/dolce-shine-eau-de/1.webp,dj-9
+47,"Gucci Bloom Eau de",5000,https://cdn.dummyjson.com/product-images/fragrances/gucci-bloom-eau-de/1.webp,dj-10

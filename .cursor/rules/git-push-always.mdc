@@ -1,0 +1,10 @@
+---
+description: Always push to GitHub after creating a commit
+alwaysApply: true
+---
+
+# Git: always push after commit
+
+When the user asks to commit (or when creating a commit they requested), also **push to the remote** (`git push -u origin HEAD` if needed) unless they explicitly say not to push.
+
+Do not force-push to main/master. Do not skip hooks unless asked.

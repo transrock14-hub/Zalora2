@@ -1,0 +1,9 @@
+id,code,name,country,email,status
+1,SUP-SG-01,Apex Wholesale Pte Ltd,Singapore,ops@apexwholesale.sg,ACTIVE
+2,SUP-MY-02,Peninsula Trade Sdn Bhd,Malaysia,sales@peninsulatrade.my,ACTIVE
+3,SUP-ID-03,Nusantara Supply Co,Indonesia,hello@nusantarasupply.id,ACTIVE
+4,SUP-TH-04,Siam Meridian Ltd,Thailand,buy@siammeridian.th,ACTIVE
+5,SUP-CN-05,Pearl Delta Trading,China,export@pearldelta.cn,ACTIVE
+6,SUP-VN-06,Saigon Catalog Partners,Vietnam,trade@saigoncatalog.vn,ACTIVE
+7,SUP-HK-07,Harbour Gate Logistics,Hong Kong,desk@harbourgate.hk,ACTIVE
+8,SUP-PH-08,Manila Bridge Imports,Philippines,orders@manilabridge.ph,ACTIVE

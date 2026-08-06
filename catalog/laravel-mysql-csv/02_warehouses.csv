@@ -1,0 +1,9 @@
+id,code,name,country,supplier_code,status
+1,WH-SG-EAST,Singapore East DC,Singapore,SUP-SG-01,ACTIVE
+2,WH-SG-WEST,Singapore West DC,Singapore,SUP-SG-01,ACTIVE
+3,WH-MY-KL,Kuala Lumpur Hub,Malaysia,SUP-MY-02,ACTIVE
+4,WH-MY-JB,Johor Link Warehouse,Malaysia,SUP-MY-02,ACTIVE
+5,WH-ID-JKT,Jakarta Central FC,Indonesia,SUP-ID-03,ACTIVE
+6,WH-TH-BKK,Bangkok Fulfilment,Thailand,SUP-TH-04,ACTIVE
+7,WH-CN-SZ,Shenzhen Export Hub,China,SUP-CN-05,ACTIVE
+8,WH-VN-HCM,Ho Chi Minh Gateway,Vietnam,SUP-VN-06,ACTIVE
