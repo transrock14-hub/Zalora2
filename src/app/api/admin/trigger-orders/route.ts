@@ -3,12 +3,12 @@ import { getSession } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { createNotification } from '@/lib/notifications'
 
-const MAX_ORDER_COUNT = 20
+const MAX_QUANTITY = 20
 
 /**
- * POST: Admin triggers one or more identical orders for a product (simulates a buyer).
- * `quantity` = how many separate identical orders to create (each with 1 unit).
- * Seller receives each order in Store Orders and a notification.
+ * POST: Admin triggers an order for a product (simulates a buyer).
+ * `quantity` = units on that single order (×2 / ×3 / ×5 from admin UI).
+ * Seller sees that quantity and pays wholesale × quantity when processing.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json()
     const { productId, customerUserId } = body
-    const orderCount = Math.max(1, Math.min(MAX_ORDER_COUNT, Math.floor(Number(body.quantity) || 1)))
+    const quantity = Math.max(1, Math.min(MAX_QUANTITY, Math.floor(Number(body.quantity) || 1)))
     if (!productId || typeof productId !== 'string') {
       return NextResponse.json({ error: 'productId is required' }, { status: 400 })
     }
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       )
     }
-    if (!Number.isFinite(orderCount) || orderCount < 1) {
+    if (!Number.isFinite(quantity) || quantity < 1) {
       return NextResponse.json({ error: 'Quantity must be at least 1' }, { status: 400 })
     }
 
@@ -81,101 +81,69 @@ export async function POST(req: NextRequest) {
     const images = (product as any).images as Array<{ url: string }> | undefined
     const imageUrl = images && images.length > 0 ? images[0].url : null
 
-    const createdOrders: Array<{ id: string; orderNumber: string }> = []
+    const orderNumber = `TRG-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`
+    const subtotal = price * quantity
+    const shipping = 0
+    const tax = 0
+    const discount = 0
+    const total = subtotal + shipping + tax - discount
 
-    for (let i = 0; i < orderCount; i++) {
-      const orderNumber = `TRG-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`
-      const subtotal = price
-      const shipping = 0
-      const tax = 0
-      const discount = 0
-      const total = subtotal + shipping + tax - discount
-
-      const { data: order, error: orderErr } = await supabaseAdmin
-        .from('orders')
-        .insert({
-          userId: customer.id,
-          shopId,
-          orderNumber,
-          subtotal,
-          shipping,
-          tax,
-          discount,
-          total,
-          status: 'PAID',
-          paymentStatus: 'COMPLETED',
-          paymentMethod: 'BANK_TRANSFER',
-          notes: JSON.stringify({
-            triggeredBy: 'admin',
-            adminTrigger: true,
-            adminUserId: auth.userId,
-            customerUserId: customer.id,
-            customerName: customer.name,
-            customerEmail: customer.email,
-            batchCount: orderCount,
-            batchIndex: i + 1,
-          }),
-        })
-        .select('id, orderNumber')
-        .single()
-
-      if (orderErr || !order) {
-        console.error('Trigger order insert error:', orderErr)
-        return NextResponse.json(
-          {
-            error:
-              createdOrders.length > 0
-                ? `Created ${createdOrders.length} of ${orderCount} orders, then failed`
-                : 'Failed to create order',
-            orders: createdOrders,
-          },
-          { status: 500 }
-        )
-      }
-
-      await supabaseAdmin.from('order_items').insert({
-        orderId: (order as any).id,
-        productId: product.id,
-        name,
-        price,
-        quantity: 1,
-        image: imageUrl,
+    const { data: order, error: orderErr } = await supabaseAdmin
+      .from('orders')
+      .insert({
+        userId: customer.id,
+        shopId,
+        orderNumber,
+        subtotal,
+        shipping,
+        tax,
+        discount,
+        total,
+        status: 'PAID',
+        paymentStatus: 'COMPLETED',
+        paymentMethod: 'BANK_TRANSFER',
+        notes: JSON.stringify({
+          triggeredBy: 'admin',
+          adminTrigger: true,
+          adminUserId: auth.userId,
+          customerUserId: customer.id,
+          customerName: customer.name,
+          customerEmail: customer.email,
+          quantity,
+        }),
       })
+      .select('id, orderNumber')
+      .single()
 
-      createdOrders.push({
-        id: (order as any).id,
-        orderNumber: (order as any).orderNumber,
-      })
+    if (orderErr || !order) {
+      console.error('Trigger order insert error:', orderErr)
+      return NextResponse.json({ error: 'Failed to create order' }, { status: 500 })
     }
 
-    const first = createdOrders[0]
-    const orderList =
-      orderCount === 1
-        ? first.orderNumber
-        : createdOrders.map((o) => o.orderNumber).join(', ')
+    await supabaseAdmin.from('order_items').insert({
+      orderId: (order as any).id,
+      productId: product.id,
+      name,
+      price,
+      quantity,
+      image: imageUrl,
+    })
 
     await createNotification({
       userId: sellerUserId,
-      title: orderCount === 1 ? 'New order' : `${orderCount} new orders`,
-      message:
-        orderCount === 1
-          ? `Your shop has a new order: ${first.orderNumber} (1× ${name})`
-          : `Your shop has ${orderCount} new orders for ${name}: ${orderList}`,
+      title: 'New order',
+      message: `Your shop has a new order: ${(order as any).orderNumber} (${quantity}× ${name})`,
       type: 'order',
-      link: `/seller/orders/${first.id}`,
+      link: `/seller/orders/${(order as any).id}`,
     })
 
     return NextResponse.json({
       success: true,
-      orderId: first.id,
-      orderNumber: first.orderNumber,
-      quantity: orderCount,
-      orders: createdOrders,
+      orderId: (order as any).id,
+      orderNumber: (order as any).orderNumber,
+      quantity,
       customer: { id: customer.id, name: customer.name, email: customer.email },
-      message:
-        orderCount === 1
-          ? 'Order triggered. Seller notified.'
-          : `${orderCount} identical orders triggered. Seller notified.`,
+      message: 'Order triggered. Seller notified.',
     })
   } catch (e) {
     console.error('Trigger order error:', e)

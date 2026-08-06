@@ -128,7 +128,7 @@ export function TriggerOrdersClient({
       toast.success(
         quantity === 1
           ? `Order ${data.orderNumber} assigned to ${selectedCustomer?.name || 'customer'}. Seller notified.`
-          : `${quantity} identical orders assigned to ${selectedCustomer?.name || 'customer'}. Seller notified.`
+          : `Order ${data.orderNumber} (${quantity}×) assigned to ${selectedCustomer?.name || 'customer'}. Seller notified.`
       )
       router.refresh()
     } catch {
@@ -143,7 +143,7 @@ export function TriggerOrdersClient({
       <div>
         <h1 className="text-2xl font-bold font-heading">Trigger orders</h1>
         <p className="text-muted-foreground text-sm">
-          Simulate an order to a shop and assign it to a specific customer. After clicking Trigger order, choose ×1, ×2, ×3, or ×5 to create that many identical orders at once.
+          Simulate an order to a shop and assign it to a specific customer. After clicking Trigger order, choose ×1, ×2, ×3, or ×5 — the seller will see that quantity and the total wholesale payment for those units.
         </p>
       </div>
 
@@ -257,7 +257,7 @@ export function TriggerOrdersClient({
                     {isPickerOpen && !isTriggering && (
                       <div className="absolute left-0 right-0 bottom-full z-20 mb-2 rounded-lg border border-border bg-background p-2 shadow-lg">
                         <p className="px-1 pb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                          Assign identical orders
+                          Assign quantity
                         </p>
                         <div className="grid grid-cols-4 gap-1.5">
                           {ORDER_COUNT_OPTIONS.map((count) => (

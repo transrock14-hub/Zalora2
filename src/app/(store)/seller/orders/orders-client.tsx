@@ -178,17 +178,29 @@ export function SellerOrdersClient({
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm">{item.name}</p>
                       <div className="mt-1 space-y-0.5 text-xs text-destructive font-medium">
-                        <p>lump sum: {formatPrice(item.lumpSum)} ×{item.quantity}</p>
-                        {item.profit != null && (
-                          <p>Sales Profit: {formatPrice(item.profit)} ×{item.quantity}</p>
+                        <p>
+                          lump sum: {formatPrice(item.price)} ×{item.quantity}
+                          {item.quantity > 1 ? ` = ${formatPrice(item.lumpSum)}` : ''}
+                        </p>
+                        {item.costPrice != null && item.profit != null && (
+                          <p>
+                            Sales Profit: {formatPrice(item.price - item.costPrice)} ×{item.quantity}
+                            {item.quantity > 1 ? ` = ${formatPrice(item.profit)}` : ''}
+                          </p>
                         )}
-                        {item.wholesaleTotal != null && (
-                          <p>Wholesale Price: {formatPrice(item.wholesaleTotal)} ×{item.quantity}</p>
+                        {item.costPrice != null && item.wholesaleTotal != null && (
+                          <p>
+                            Wholesale Price: {formatPrice(item.costPrice)} ×{item.quantity}
+                            {item.quantity > 1 ? ` = ${formatPrice(item.wholesaleTotal)}` : ''}
+                          </p>
                         )}
                       </div>
                       <p className="mt-1 text-sm font-bold text-destructive">
                         Actual payment:{' '}
-                        {formatPrice(item.wholesaleTotal != null ? item.wholesaleTotal : item.lumpSum)}
+                        {formatPrice(
+                          item.wholesaleTotal != null ? item.wholesaleTotal : item.lumpSum
+                        )}
+                        {item.quantity > 1 ? ` (${item.quantity} units)` : ''}
                       </p>
                       {['DELIVERED', 'COMPLETED'].includes(order.status) &&
                         item.wholesaleTotal != null && (
@@ -201,7 +213,9 @@ export function SellerOrdersClient({
                       {['SHIPPED', 'PROCESSING', 'PAID'].includes(order.status) &&
                         item.wholesaleTotal != null && (
                           <p className="mt-2 text-[11px] leading-snug text-muted-foreground font-normal">
-                            On delivery you receive the lump sum ({formatPrice(item.lumpSum)} = wholesale +
+                            On delivery you receive the lump sum (
+                            {formatPrice(item.lumpSum)}
+                            {item.quantity > 1 ? ` for ${item.quantity} units` : ''} = wholesale +
                             profit).
                           </p>
                         )}
