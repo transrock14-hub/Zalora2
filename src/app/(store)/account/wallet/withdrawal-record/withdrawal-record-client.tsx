@@ -111,11 +111,12 @@ export function WithdrawalRecordClient({ shopId, backHref = '/account/wallet/wit
                         {w.status}
                       </span>
                     </div>
-                    {w.status === 'REJECTED' && w.rejectionReason && (
+                    {w.status === 'REJECTED' && (
                       <div className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2">
                         <p className="text-xs font-medium text-red-800">Rejection reason</p>
                         <p className="text-sm text-red-700 mt-0.5 whitespace-pre-wrap">
-                          {w.rejectionReason}
+                          {w.rejectionReason?.trim() ||
+                            'No reason was provided for this rejection.'}
                         </p>
                       </div>
                     )}

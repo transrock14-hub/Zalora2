@@ -7,13 +7,6 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { formatDateTime } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
@@ -37,7 +30,7 @@ export function WithdrawalsClient() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<string>('PENDING')
   const [updating, setUpdating] = useState<string | null>(null)
-  const [rejectTarget, setRejectTarget] = useState<Withdrawal | null>(null)
+  const [rejectingId, setRejectingId] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
 
   const fetchWithdrawals = async () => {
@@ -59,6 +52,8 @@ export function WithdrawalsClient() {
 
   useEffect(() => {
     fetchWithdrawals()
+    setRejectingId(null)
+    setRejectReason('')
   }, [filter])
 
   const handleApprove = async (id: string) => {
@@ -83,22 +78,26 @@ export function WithdrawalsClient() {
     }
   }
 
-  const openRejectDialog = (w: Withdrawal) => {
-    setRejectTarget(w)
+  const startReject = (w: Withdrawal) => {
+    setRejectingId(w.id)
     setRejectReason('')
   }
 
-  const handleRejectConfirm = async () => {
-    if (!rejectTarget) return
+  const cancelReject = () => {
+    setRejectingId(null)
+    setRejectReason('')
+  }
+
+  const handleRejectConfirm = async (id: string) => {
     const reason = rejectReason.trim()
     if (!reason) {
       toast.error('Rejection reason is required')
       return
     }
 
-    setUpdating(rejectTarget.id)
+    setUpdating(id)
     try {
-      const res = await fetch(`/api/admin/withdrawals/${rejectTarget.id}`, {
+      const res = await fetch(`/api/admin/withdrawals/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'REJECTED', rejectionReason: reason }),
@@ -108,8 +107,8 @@ export function WithdrawalsClient() {
         const data = await res.json()
         throw new Error(data.error || 'Failed')
       }
-      toast.success('Withdrawal rejected')
-      setRejectTarget(null)
+      toast.success('Withdrawal rejected — seller will see your reason')
+      setRejectingId(null)
       setRejectReason('')
       fetchWithdrawals()
     } catch (err: unknown) {
@@ -151,7 +150,7 @@ export function WithdrawalsClient() {
   }
 
   return (
-    <div className="p-6 lg:p-8 max-w-4xl">
+    <div className="p-6 lg:p-8 max-w-4xl pb-24 lg:pb-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <h1 className="text-2xl font-bold font-heading">Withdrawal Approvals</h1>
         <div className="flex gap-2">
@@ -179,134 +178,129 @@ export function WithdrawalsClient() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {withdrawals.map((w) => (
-            <Card key={w.id}>
-              <CardContent className="p-4">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium">{w.currency} {w.network ? `(${w.network})` : ''}</p>
-                    <p className="text-2xl font-bold mt-1">{Number(w.amount).toFixed(2)}</p>
-                    <p className="text-xs text-muted-foreground mt-1 font-mono break-all max-w-xs">
-                      {w.address}
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {w.user?.name} · {w.user?.email}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {formatDateTime(w.createdAt)}
-                    </p>
-                    {w.status === 'REJECTED' && w.rejectionReason && (
-                      <div className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2">
-                        <p className="text-xs font-medium text-red-800">Rejection reason</p>
-                        <p className="text-sm text-red-700 mt-0.5 whitespace-pre-wrap">
-                          {w.rejectionReason}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {w.shopId ? (
-                      <Badge variant="secondary" className="bg-violet-100 text-violet-800">Shop balance</Badge>
-                    ) : (
-                      <Badge variant="secondary" className="bg-slate-100 text-slate-800">User balance</Badge>
-                    )}
-                    <Badge className={statusColor(w.status)}>{w.status}</Badge>
-                    {w.status === 'PENDING' && (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="default"
-                          onClick={() => handleApprove(w.id)}
-                          disabled={updating === w.id}
-                        >
-                          {updating === w.id ? '...' : 'Approve'}
-                        </Button>
+          {withdrawals.map((w) => {
+            const isRejecting = rejectingId === w.id
+            return (
+              <Card key={w.id} className={isRejecting ? 'ring-2 ring-destructive/40' : undefined}>
+                <CardContent className="p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium">
+                        {w.currency} {w.network ? `(${w.network})` : ''}
+                      </p>
+                      <p className="text-2xl font-bold mt-1">{Number(w.amount).toFixed(2)}</p>
+                      <p className="text-xs text-muted-foreground mt-1 font-mono break-all max-w-xs">
+                        {w.address}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {w.user?.name} · {w.user?.email}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {formatDateTime(w.createdAt)}
+                      </p>
+                      {w.status === 'REJECTED' && (
+                        <div className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2">
+                          <p className="text-xs font-medium text-red-800">Rejection reason</p>
+                          <p className="text-sm text-red-700 mt-0.5 whitespace-pre-wrap">
+                            {w.rejectionReason?.trim() || 'No reason was recorded for this rejection.'}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {w.shopId ? (
+                        <Badge variant="secondary" className="bg-violet-100 text-violet-800">
+                          Shop balance
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="bg-slate-100 text-slate-800">
+                          User balance
+                        </Badge>
+                      )}
+                      <Badge className={statusColor(w.status)}>{w.status}</Badge>
+                      {w.status === 'PENDING' && !isRejecting && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => handleApprove(w.id)}
+                            disabled={updating === w.id}
+                          >
+                            {updating === w.id ? '...' : 'Approve'}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => startReject(w)}
+                            disabled={updating === w.id}
+                          >
+                            Reject
+                          </Button>
+                        </>
+                      )}
+                      {w.status === 'APPROVED' && (
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => openRejectDialog(w)}
+                          className="text-destructive border-destructive/40 hover:bg-destructive/10"
+                          onClick={() => handleHideFromAdmin(w.id)}
+                          disabled={updating === w.id}
+                          title="Hide from admin view (user still sees it)"
+                        >
+                          <Icon icon="solar:eye-closed-bold" className="size-4 mr-1.5" />
+                          {updating === w.id ? '...' : 'Remove from admin'}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  {w.status === 'PENDING' && isRejecting && (
+                    <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/5 p-4 space-y-3">
+                      <div>
+                        <p className="text-sm font-semibold text-destructive">Reject withdrawal</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Enter the reason below. The seller will see this on their Withdrawal Record
+                          page.
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor={`reject-reason-${w.id}`}>Reason (required)</Label>
+                        <Textarea
+                          id={`reject-reason-${w.id}`}
+                          value={rejectReason}
+                          onChange={(e) => setRejectReason(e.target.value)}
+                          placeholder="e.g. Incomplete wallet address / KYC documents required / Amount exceeds daily limit"
+                          rows={4}
+                          autoFocus
+                          required
+                        />
+                      </div>
+                      <div className="flex flex-wrap justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={cancelReject}
                           disabled={updating === w.id}
                         >
-                          Reject
+                          Cancel
                         </Button>
-                      </>
-                    )}
-                    {w.status === 'APPROVED' && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-destructive border-destructive/40 hover:bg-destructive/10"
-                        onClick={() => handleHideFromAdmin(w.id)}
-                        disabled={updating === w.id}
-                        title="Hide from admin view (user still sees it)"
-                      >
-                        <Icon icon="solar:eye-closed-bold" className="size-4 mr-1.5" />
-                        {updating === w.id ? '...' : 'Remove from admin'}
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleRejectConfirm(w.id)}
+                          disabled={updating === w.id || !rejectReason.trim()}
+                        >
+                          {updating === w.id ? 'Rejecting...' : 'Confirm rejection'}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )
+          })}
         </div>
       )}
-
-      <Dialog
-        open={!!rejectTarget}
-        onOpenChange={(open) => {
-          if (!open) {
-            setRejectTarget(null)
-            setRejectReason('')
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reject withdrawal</DialogTitle>
-            <DialogDescription>
-              Provide a reason for declining this request. The merchant will see this reason in
-              their withdrawal record.
-            </DialogDescription>
-          </DialogHeader>
-          {rejectTarget && (
-            <p className="text-sm text-muted-foreground">
-              {rejectTarget.currency} {Number(rejectTarget.amount).toFixed(2)} ·{' '}
-              {rejectTarget.user?.name}
-            </p>
-          )}
-          <div className="space-y-2">
-            <Label htmlFor="withdrawal-reject-reason">Reason (required)</Label>
-            <Textarea
-              id="withdrawal-reject-reason"
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              placeholder="e.g. Incomplete wallet address / KYC documents required / Amount exceeds daily limit"
-              rows={4}
-              required
-            />
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setRejectTarget(null)
-                setRejectReason('')
-              }}
-              disabled={updating === rejectTarget?.id}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleRejectConfirm}
-              disabled={updating === rejectTarget?.id || !rejectReason.trim()}
-            >
-              {updating === rejectTarget?.id ? 'Rejecting...' : 'Reject withdrawal'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
